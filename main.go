@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/argusdusty/gofft"
+	"gitlab.com/gomidi/midi/v2"
 )
 
 func testingArray() []complex128 {

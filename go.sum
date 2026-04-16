@@ -2,5 +2,7 @@ github.com/argusdusty/gofft v1.2.1 h1:Ir33IyKzMPvgK70PPWtmHpzjbTsUkL51EunWn4mrks
 github.com/argusdusty/gofft v1.2.1/go.mod h1:OABUQ4XoJ49ucI4ZPv0i6a0x3KKM4yDSK5rsMwFL43Q=
 github.com/ktye/fft v0.0.0-20160109133121-5beb24bb6a43/go.mod h1:NOC+5BizuazWsAS/Ge7DXbXTrYzmmDXGqypnTaeNGcc=
 github.com/mjibson/go-dsp v0.0.0-20180508042940-11479a337f12/go.mod h1:i/KKcxEWEO8Yyl11DYafRPKOPVYTrhxiTRigjtEEXZU=
+gitlab.com/gomidi/midi/v2 v2.3.23 h1:P8NxV4EzV9c+BjpwTeB+G/qa+Xdq/UTazS2fKxY0O0g=
+gitlab.com/gomidi/midi/v2 v2.3.23/go.mod h1:jDpP4O4skYi+7iVwt6Zyp18bd2M4hkjtMuw2cmgKgfw=
 scientificgo.org/fft v0.0.0-20181116155530-840c07972bf0/go.mod h1:kjCWUUjwe8nWCDf1noBWJt/zni0qg84jDUBfJhH/ftA=
 scientificgo.org/testutil v0.0.0-20181122181445-a2006c033c77/go.mod h1:Go6R4b+9YkFocMo3H3vNQ7tjbrX9Rc12wal7NZjvPXg=
