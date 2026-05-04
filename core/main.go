@@ -1,6 +1,10 @@
+//go:build js && wasm
+
 package core
 
 import (
+	"fmt"
+
 	"github.com/argusdusty/gofft"
 	// "gitlab.com/gomidi/midi/v2"
 )
@@ -47,7 +51,10 @@ func (s *Song) Analyze() *ParsedSong {
 	}
 }
 
-func main() {
+//go:wasmexport Init
+func Init() {
+
+	fmt.Println("ts works")
 	// Do an FFT and IFFT and get the same result
 	// testArray := testingArray()
 }

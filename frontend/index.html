@@ -1,47 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Fourier Analysis</title>
-    <link rel="stylesheet" href="/style.css">
-</head>
-<body>
-    <div class="container">
-        <h1>Audio Fourier Analysis</h1>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>Audio Fourier Analysis</title>
+		<link rel="stylesheet" href="/style.css">
 
-        <div class="file-input-section">
-            <h3>Select Audio File</h3>
-            <input type="file" id="audioFile" class="file-input" accept="audio/*">
-            <p>Supports MP3, WAV, M4A, and other common audio formats</p>
-        </div>
+		<script src="wasm_exec.js"></script>
+		<script>
+			const go = new Go();
+			WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
+				//go.run(result.instance);
+				result.instance.exports.Init()
+				
+				});
+		</script>
+	</head>
+	<body>
+		<div class="container">
+			<h1>Audio Fourier Analysis</h1>
 
-        <div class="controls">
-            <button id="playButton" disabled>Play</button>
-            <button id="pauseButton" disabled>Pause</button>
-            <button id="analyzeButton" disabled>Analyze</button>
-        </div>
+			<div class="file-input-section">
+				<h3>Select Audio File</h3>
+				<input type="file" id="audioFile" class="file-input" accept="audio/*">
+				<p>Supports MP3, WAV, M4A, and other common audio formats</p>
+			</div>
 
-        <div class="info-panel hidden" id="audioInfo">
-            <h4>Audio Information</h4>
-            <div id="audioDetails"></div>
-        </div>
+			<div class="controls">
+				<button id="playButton" disabled>Play</button>
+				<button id="pauseButton" disabled>Pause</button>
+				<button id="analyzeButton" disabled>Analyze</button>
+			</div>
 
-        <div class="analysis-section">
-            <h3>Frequency Spectrum Analysis</h3>
-            <div class="canvas-container">
-                <canvas id="frequencyCanvas" width="1000" height="400"></canvas>
-            </div>
+			<div class="info-panel hidden" id="audioInfo">
+				<h4>Audio Information</h4>
+				<div id="audioDetails"></div>
+			</div>
 
-            <h3>Waveform</h3>
-            <div class="canvas-container">
-                <canvas id="waveformCanvas" width="1000" height="200"></canvas>
-            </div>
-        </div>
-    </div>
+			<div class="analysis-section">
+				<h3>Frequency Spectrum Analysis</h3>
+				<div class="canvas-container">
+					<canvas id="frequencyCanvas" width="1000" height="400"></canvas>
+				</div>
 
-    <script src="/script.js">
-    </script>
-</body>
+				<h3>Waveform</h3>
+				<div class="canvas-container">
+					<canvas id="waveformCanvas" width="1000" height="200"></canvas>
+				</div>
+			</div>
+		</div>
+
+		<script src="/script.js">
+		</script>
+	</body>
 </html>
-
