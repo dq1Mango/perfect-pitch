@@ -7,11 +7,14 @@
 		<link rel="stylesheet" href="/style.css">
 
 		<script src="wasm_exec.js"></script>
+
 		<script>
 			const go = new Go();
 			WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
-				//go.run(result.instance);
-				result.instance.exports.Init()
+				go.run(result.instance);
+
+        testing();
+				//result.instance.exports.Init()
 				
 				});
 		</script>
