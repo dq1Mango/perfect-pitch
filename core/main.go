@@ -1,13 +1,98 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"slices"
+	"strconv"
 
 	"github.com/argusdusty/gofft"
 	// "gitlab.com/gomidi/midi/v2"
 )
+
+var MAX_SIMULTANEOUS_NOTES = 3
+var LOWEST_NOTE_RESOLUTION = 2
+
+var InvalidNoteError = errors.New("Invalid note representation")
+
+// format is NoteName[#/♭][Octave]
+// eg. A4, C#2, D♭2
+// if ocatve is not given 4 is assuming (u should specify tho)
+func noteFromString(note string) (*Pitch, error) {
+
+	if len(note) < 1 || len(note) > 3 {
+		return nil, InvalidNoteError
+	}
+	// index := 0
+	// name := string(note[index])
+	// index++
+	//
+	// if index < len(note) {
+	//
+	// 	if n2 := string(note[1]); n2 == "#" || n2 == "♭" {
+	// 		name += n2
+	// 	}
+	//
+	// 	index++
+	// }
+
+	var octave = 4
+	var name string = string(note[0])
+
+	switch len(note) {
+	// slices.Index()
+	// var index int
+	//
+	// for i, v := range SharpNames {
+	// 	if note == v {
+	// 		index = i
+	// 	}
+	// }
+	case 2:
+		if n2 := string(note[1]); n2 == "#" || n2 == "♭" {
+			name += n2
+		} else {
+			maybeOctave, err := strconv.Atoi(n2)
+			if err != nil {
+				return nil, InvalidNoteError
+			}
+
+			octave = maybeOctave
+		}
+
+	case 3:
+		if n2 := string(note[1]); n2 == "#" || n2 == "♭" {
+			name += n2
+		} else {
+			return nil, InvalidNoteError
+		}
+
+		maybeOctave, err := strconv.Atoi(string(note[2]))
+		if err != nil {
+			return nil, InvalidNoteError
+		}
+
+		octave = maybeOctave
+	}
+
+	// yeah its ugly but its consice idc
+	n := slices.Index(SharpNames, name)
+	if n == -1 {
+		n = slices.Index(FlatNames, name)
+	}
+
+	if n == -1 {
+		return nil, InvalidNoteError
+	}
+
+	octave -= 4
+
+	n += 12 * octave
+
+	return noteNum2Pitch(n), nil
+
+}
 
 func makeFFTUseful(fft []complex128) ([]float64, []float64) {
 	amplitudes := make([]float64, len(fft))
@@ -36,7 +121,9 @@ type Song struct {
 }
 
 type ParsedSong struct {
-	FFT []float64
+	TheGram *Spectrogram
+	Pitches []Pitch
+	Index   int
 }
 
 type FreqBins []float64
@@ -58,17 +145,14 @@ func complicate(arr []float64) []complex128 {
 
 func (s *Song) Analyze() *ParsedSong {
 
-	complicated := complicate(s.Audio)
-	err := gofft.FFT(complicated)
+	spectrogram := MakeSpectrogram(s.Audio)
 
-	usefull, _ := makeFFTUseful(complicated)
-
-	if err != nil {
-		panic(err)
-	}
+	pitches := spectrogram.PrimaryPitches()
 
 	return &ParsedSong{
-		FFT: usefull,
+		TheGram: spectrogram,
+		Pitches: pitches,
+		Index:   0,
 	}
 }
 
@@ -152,6 +236,11 @@ func pitch2NoteNum(pitch *Pitch) int {
 
 	return int(remEuclid(n, 12.0))
 
+}
+
+func noteNum2Pitch(n int) *Pitch {
+	pitch := Pitch(A4_FREQ * math.Exp2(float64(n)/12.0))
+	return &pitch
 }
 
 // Name returns the standard note name for the given frequency (in Hz).

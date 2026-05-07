@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"slices"
@@ -73,7 +74,7 @@ func TestNoteName(t *testing.T) {
 		{440.0, "A"},
 		{220.0, "A"},
 		{880.0, "A"},
-		{466.17, "A#"},
+		{466.16, "A#"},
 		{392.0, "G"},
 		{523.25, "C"},
 		{493.88, "B"},
@@ -126,4 +127,65 @@ func TestNoteName(t *testing.T) {
 	// 		fmt.Printf("PASS: Pitch %.2fHz -> NameFlat() is %s\n", tt.freq, got)
 	// 	}
 	// }
+}
+
+func roundTo(value float64, n int) float64 {
+	factor := math.Pow(10, float64(n))
+	return math.Round(value*factor) / factor
+}
+
+func TestParseNote(t *testing.T) {
+
+	// yeah u caught me, these r the same ai made test cases as before
+	tests := []struct {
+		want float64
+		note string
+		err  error
+	}{
+		{440.0, "A", nil},
+		{220.0, "A3", nil},
+		{880.0, "A5", nil},
+		{466.16, "A#", nil},
+		{392.0, "G3", nil},
+		{523.25, "C", nil},
+		{493.88, "B", nil},
+		// {320.0, "D#3", nil},
+		{369.99, "F#3", nil},
+		{415.30, "G#3", nil},
+		{349.23, "F3", nil},
+		{261.63, "C3", nil},
+
+		{0, "ABC", InvalidNoteError},
+		{0, "", InvalidNoteError},
+	}
+
+	for _, tt := range tests {
+		pitch, err := noteFromString(tt.note)
+
+		if !errors.Is(tt.err, err) {
+			t.Errorf(
+				"FAIL: Note %.2s -> NoteFromeString() got error %s, want %s\n",
+				tt.note,
+				err,
+				tt.err,
+			)
+		}
+
+		if err != nil {
+			continue
+		}
+
+		got := roundTo(float64(*pitch), 2)
+		if got != tt.want {
+			t.Errorf(
+				"FAIL: Pitch %.2s ->NoteFromeString() got %fHz, want %fHz\n",
+				tt.note,
+				got,
+				tt.want,
+			)
+		} else {
+			fmt.Printf("PASS: Pitch %.2s -> NoteFromeString() is %.2fHz\n", tt.note, got)
+		}
+	}
+
 }
