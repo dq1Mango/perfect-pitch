@@ -1,11 +1,9 @@
-//go:build js && wasm
-
 package core
 
 import (
 	"fmt"
 	"math"
-	"syscall/js"
+	"slices"
 
 	"github.com/argusdusty/gofft"
 	// "gitlab.com/gomidi/midi/v2"
@@ -75,16 +73,7 @@ func (s *Song) Analyze() *ParsedSong {
 }
 
 func Test() {
-
 	fmt.Println("ts works")
-	// Do an FFT and IFFT and get the same result
-	// testArray := testingArray()
-}
-
-func WrapTest(this js.Value, args []js.Value) any {
-	Test()
-
-	return nil
 }
 
 func f32tof64(arr []float64) []float64 {
@@ -142,5 +131,83 @@ func MakeSpectrogram(audio []float64) *Spectrogram {
 	fmt.Println("bitches love the (spectro)gram")
 
 	return spectrogram
+
+}
+
+// Reference frequency: A4 = 440 Hz
+const A4_FREQ = 440.0
+
+var SharpNames = []string{"A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"}
+var FlatNames = []string{"A", "B♭", "B", "C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭"}
+
+type Pitch float64
+
+func remEuclid(a, b float64) float64 {
+	return math.Mod(math.Mod(a, b)+b, b)
+}
+
+func pitch2NoteNum(pitch *Pitch) int {
+	n := 12.0 * math.Log2(float64(*pitch)/A4_FREQ)
+	n = math.Round(n)
+
+	return int(remEuclid(n, 12.0))
+
+}
+
+// Name returns the standard note name for the given frequency (in Hz).
+// It uses A4 = 440Hz as the reference.
+func (p *Pitch) SharpName() string {
+
+	if *p <= 0 {
+		return "Unknown"
+	}
+
+	n := pitch2NoteNum(p)
+
+	// Map pitch class to note name
+
+	// Determine representation: prefer sharp unless it's C, E, F, or G
+	// For C, E, F, G, the flat version (b) is also common, but we'll stick to sharp
+	// unless the user specifically wants a preference, but returning the standard sharp
+	// representation is usually clearest.
+	noteName := SharpNames[n]
+
+	// Optional: If we wanted to favor flats for certain notes (e.g., Cb, Eb, Fb, Gb)
+	// switch pitchClass {
+	// case 1: // C#
+	// 	if *p == 415.30 { return "Cb" } // Example for Cb
+	// case 3: // D#
+	// 	if *p == 392.0 { return "Db" } // Example for Db
+	// case 6: // F#
+	// 	if *p == 369.99 { return "Gb" } // Example for Gb
+	// case 8: // G#
+	// 	if *p == 392.0 { return "Ab" } // Example for Ab (Note: 392 is also D#)
+	// }
+
+	return noteName
+}
+
+func (p *Pitch) FlatName() string {
+
+	if *p <= 0 {
+		return "Unknown"
+	}
+
+	n := pitch2NoteNum(p)
+
+	noteName := FlatNames[n]
+
+	return noteName
+}
+
+func (sp *Spectrogram) PrimaryPitches() []Pitch {
+	pitches := make([]Pitch, len(sp.Data))
+
+	for i, v := range sp.Data {
+
+		pitches[i] = Pitch(slices.Max(v))
+	}
+
+	return pitches
 
 }

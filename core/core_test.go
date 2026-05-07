@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"math"
 	"slices"
 	"testing"
@@ -59,4 +60,70 @@ func TestHandBaked(t *testing.T) {
 	if !slices.Equal(realResult, handResult) {
 		t.Errorf("FFTs not equal\nExpected: %v\nActual: %v", realResult, handResult)
 	}
+}
+
+func TestNoteName(t *testing.T) {
+	fmt.Println("--- Running Pitch.Name() (Sharp Preference) Tests ---")
+
+	// Test cases: Frequency, Expected Sharp Name
+	tests := []struct {
+		freq float64
+		want string
+	}{
+		{440.0, "A"},
+		{220.0, "A"},
+		{880.0, "A"},
+		{466.17, "A#"},
+		{392.0, "G"},
+		{523.25, "C"},
+		{493.88, "B"},
+		{320.0, "D#"},
+		{369.99, "F#"},
+		{415.30, "G#"},
+		{349.28, "F"},
+		{261.63, "C"},
+		{0.0, "Unknown"},
+	}
+
+	for _, tt := range tests {
+		p := Pitch(tt.freq)
+		got := p.SharpName()
+		if got != tt.want {
+			t.Errorf("FAIL: Pitch %.2fHz -> Name() got %s, want %s\n", tt.freq, got, tt.want)
+		} else {
+			fmt.Printf("PASS: Pitch %.2fHz -> Name() is %s\n", tt.freq, got)
+		}
+	}
+
+	// fmt.Println("\n--- Running Pitch.NameFlat() (Flat Preference) Tests ---")
+	//
+	// // Test cases: Frequency, Expected Flat Name
+	// flatTests := []struct {
+	// 	freq float64
+	// 	want string
+	// }{
+	// 	{440.0, "A"},     // Reference A4
+	// 	{220.0, "A"},     // A3
+	// 	{880.0, "A"},     // A5
+	// 	{415.30, "Cb"},   // Cb4 (Flat preference)
+	// 	{392.0, "Db"},    // Db4 (Flat preference, common for 392Hz)
+	// 	{523.25, "C#"},   // C#5 (often written as Db5, but let's test Db)
+	// 	{392.0, "Db"},    // Db4 (Testing 392 again)
+	// 	{493.88, "B"},    // B4 (B is usually B, not Bb, unless preferred)
+	// 	{320.0, "E"},     // E4
+	// 	{369.99, "Gb"},   // Gb4 (Flat preference)
+	// 	{349.28, "F"},    // F4
+	// 	{261.63, "C"},    // C4
+	// 	{0.0, "Unknown"}, // Zero frequency
+	// }
+	//
+	// for _, tt := range flatTests {
+	// 	p := Pitch(tt.freq)
+	// 	got := p.SharpName()
+	// 	if got != tt.want {
+	// 		fmt.Printf("FAIL: Pitch %.2fHz -> NameFlat() got %s, want %s\n", tt.freq, got, tt.want)
+	// 	} else {
+	// 		fmt.Printf("PASS: Pitch %.2fHz -> NameFlat() is %s\n", tt.freq, got)
+	// 	}
+	// }
 }
