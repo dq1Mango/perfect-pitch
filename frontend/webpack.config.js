@@ -23,6 +23,19 @@ module.exports = {
       module: /wasm_exec.js$/,
     },
   ],
+
+  devServer: {
+    static: {
+      directory: path.resolve(__dirname, "dist"),
+    },
+    compress: true,
+    port: 6767,
+  },
+
+  output: {
+    filename: "main.js",
+    path: path.resolve(__dirname, "dist"),
+  },
   // loader: "golang-wasm",
   // options: {
   //   goroot: "/run/current-system/sw", // or wherever `which go` points on your system

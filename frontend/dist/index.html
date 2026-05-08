@@ -5,19 +5,20 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>Audio Fourier Analysis</title>
 		<link rel="stylesheet" href="/style.css">
+		<script src="main.js"></script>
 
-		<script src="wasm_exec.js"></script>
+		<!-- <script src="wasm_exec.js"></script> -->
 
-		<script>
-			const go = new Go();
-			WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
-				go.run(result.instance);
-
-        testing();
-				//result.instance.exports.Init()
-				
-				});
-		</script>
+		<!-- <script> -->
+		<!-- 	const go = new Go(); -->
+		<!-- 	WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => { -->
+		<!-- 		go.run(result.instance); -->
+		<!---->
+		<!--       testing(); -->
+		<!-- 		//result.instance.exports.Init() -->
+		<!---->
+		<!-- 		}); -->
+		<!-- </script> -->
 	</head>
 	<body>
 		<div class="container">
@@ -53,7 +54,6 @@
 			</div>
 		</div>
 
-		<script src="/script.js">
-		</script>
+		<!-- <script src="/script.js"> -->
 	</body>
 </html>

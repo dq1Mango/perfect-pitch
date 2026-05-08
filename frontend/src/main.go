@@ -67,22 +67,22 @@ func convertNestedSlice(matrix []core.FreqBins) []any {
 	return outer
 }
 
-func WrapMakeSpectrogram(this js.Value, args []js.Value) any {
-	var audio []float64
-
-	if len(args) == 1 {
-		audio = parseJSArray(args[0])
-	} else {
-		println("hey man, u gotta give me a song")
-	}
-
-	spectrogram := core.MakeSpectrogram(audio)
-
-	println("wow that takes almost as long as the whole fft")
-
-	return js.ValueOf(convertNestedSlice(spectrogram.Data))
-
-}
+// func WrapMakeSpectrogram(this js.Value, args []js.Value) any {
+// 	var audio []float64
+//
+// 	if len(args) == 1 {
+// 		audio = parseJSArray(args[0])
+// 	} else {
+// 		println("hey man, u gotta give me a song")
+// 	}
+//
+// 	spectrogram := core.MakeSpectrogram(audio)
+//
+// 	println("wow that takes almost as long as the whole fft")
+//
+// 	return js.ValueOf(convertNestedSlice(spectrogram.Data))
+//
+// }
 
 const TEST = "wow this is pretty neat"
 
@@ -94,7 +94,8 @@ func main() {
 
 	// js.Global().Set("newSong", js.FuncOf(WrapNewSong))
 
-	js.Global().Set("makeSpectrogram", js.FuncOf(WrapMakeSpectrogram))
+	// js.Global().Set("makeSpectrogram", js.FuncOf(WrapMakeSpectrogram))
+	wasm.Expose("makeSpectrogram", core.MakeSpectrogram)
 
 	wasm.Ready()
 

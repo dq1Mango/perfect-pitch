@@ -1,5 +1,7 @@
 import wasm from "./main.go";
 
+console.log(await wasm.testString());
+
 // const go = new Go();
 // WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
 //   go.run(result.instance);
@@ -26,6 +28,7 @@ class AudioAnalyzer {
 
   initializeElements() {
     this.fileInput = document.getElementById("audioFile");
+    console.log(this.fileInput);
     this.playButton = document.getElementById("playButton");
     this.pauseButton = document.getElementById("pauseButton");
     this.analyzeButton = document.getElementById("analyzeButton");
@@ -65,8 +68,9 @@ class AudioAnalyzer {
       // let song = newSong(this.audioBuffer.getChannelData(0));
       // song.test();
       // let fft = song.analyze();
-
-      // spectrogram = makeSpectrogram(this.audioBuffer.getChannelData(0));
+      spectrogram = await wasm.makeSpectrogram([1, 2, 3, 4]);
+      console.log("bruh");
+      spectrogram = await wasm.makeSpectrogram(Array.from(this.audioBuffer.getChannelData(0)));
 
       // Display audio information
       this.displayAudioInfo(file, this.audioBuffer);
@@ -228,5 +232,7 @@ class AudioAnalyzer {
 
 // Initialize the analyzer when the page loads
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("ah");
   new AudioAnalyzer();
 });
+new AudioAnalyzer();

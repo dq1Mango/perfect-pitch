@@ -12,14 +12,29 @@ import (
 )
 
 var MAX_SIMULTANEOUS_NOTES = 3
-var LOWEST_NOTE_RESOLUTION = 2
+var LOWEST_NOTE_RESOLUTION Pitch = 55.0
 
 var InvalidNoteError = errors.New("Invalid note representation")
 
-// format is NoteName[#/♭][Octave]
+type Note struct {
+	Letter   string
+	Accident string
+	Octave   int
+	Cents    int
+}
+
+func (n *Note) String() string {
+	cents := ""
+	if n.Cents != 0 {
+		cents = fmt.Sprintf("%dC", n.Cents)
+	}
+
+	return n.Letter + n.Accident + fmt.Sprintf("%d", n.Octave) + cents
+}
+
+// format is NoteName[#/♭]Octave[+/-][cents]
 // eg. A4, C#2, D♭2
-// if ocatve is not given 4 is assuming (u should specify tho)
-func noteFromString(note string) (*Pitch, error) {
+func betterNoteFromString(note string) (*Pitch, error) {
 
 	if len(note) < 1 || len(note) > 3 {
 		return nil, InvalidNoteError
@@ -41,14 +56,6 @@ func noteFromString(note string) (*Pitch, error) {
 	var name string = string(note[0])
 
 	switch len(note) {
-	// slices.Index()
-	// var index int
-	//
-	// for i, v := range SharpNames {
-	// 	if note == v {
-	// 		index = i
-	// 	}
-	// }
 	case 2:
 		if n2 := string(note[1]); n2 == "#" || n2 == "♭" {
 			name += n2
@@ -86,7 +93,73 @@ func noteFromString(note string) (*Pitch, error) {
 		return nil, InvalidNoteError
 	}
 
-	octave -= 4
+	n += 12 * octave
+
+	return noteNum2Pitch(n), nil
+
+}
+
+// format is NoteName[#/♭][Octave]
+// eg. A4, C#2, D♭2
+// if ocatve is not given 4 is assuming (u should specify tho)
+func noteFromString(note string) (*Pitch, error) {
+
+	if len(note) < 1 || len(note) > 3 {
+		return nil, InvalidNoteError
+	}
+	// index := 0
+	// name := string(note[index])
+	// index++
+	//
+	// if index < len(note) {
+	//
+	// 	if n2 := string(note[1]); n2 == "#" || n2 == "♭" {
+	// 		name += n2
+	// 	}
+	//
+	// 	index++
+	// }
+
+	var octave = 4
+	var name string = string(note[0])
+
+	switch len(note) {
+	case 2:
+		if n2 := string(note[1]); n2 == "#" || n2 == "♭" {
+			name += n2
+		} else {
+			maybeOctave, err := strconv.Atoi(n2)
+			if err != nil {
+				return nil, InvalidNoteError
+			}
+
+			octave = maybeOctave
+		}
+
+	case 3:
+		if n2 := string(note[1]); n2 == "#" || n2 == "♭" {
+			name += n2
+		} else {
+			return nil, InvalidNoteError
+		}
+
+		maybeOctave, err := strconv.Atoi(string(note[2]))
+		if err != nil {
+			return nil, InvalidNoteError
+		}
+
+		octave = maybeOctave
+	}
+
+	// yeah its ugly but its consice idc
+	n := slices.Index(SharpNames, name)
+	if n == -1 {
+		n = slices.Index(FlatNames, name)
+	}
+
+	if n == -1 {
+		return nil, InvalidNoteError
+	}
 
 	n += 12 * octave
 
@@ -143,9 +216,19 @@ func complicate(arr []float64) []complex128 {
 	return complicated
 }
 
+func complicate32(arr []float32) []complex128 {
+	complicated := make([]complex128, len(arr))
+
+	for i, v := range arr {
+		complicated[i] = complex(float64(v), 0)
+	}
+
+	return complicated
+}
+
 func (s *Song) Analyze() *ParsedSong {
 
-	spectrogram := MakeSpectrogram(s.Audio)
+	spectrogram := MakeSpectrogram([]float32{})
 
 	pitches := spectrogram.PrimaryPitches()
 
@@ -183,7 +266,7 @@ func (s *Song) Test() {
 const FFT_SIZE = 2048
 const SAMPLES_PER_HOP = 44100 / 144
 
-func MakeSpectrogram(audio []float64) *Spectrogram {
+func MakeSpectrogram(audio []float32) *Spectrogram {
 	fmt.Println("all for the (spectro)gram")
 
 	hops := len(audio) / SAMPLES_PER_HOP
@@ -197,7 +280,7 @@ func MakeSpectrogram(audio []float64) *Spectrogram {
 	for j < len(audio) {
 		slice := audio[i:j]
 
-		complicated := complicate(slice)
+		complicated := complicate32(slice)
 
 		_ = gofft.FFT(complicated)
 
