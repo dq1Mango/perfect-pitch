@@ -1,3 +1,5 @@
+import wasm from "./main.go";
+
 // const go = new Go();
 // WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
 //   go.run(result.instance);
@@ -64,7 +66,7 @@ class AudioAnalyzer {
       // song.test();
       // let fft = song.analyze();
 
-      spectrogram = makeSpectrogram(this.audioBuffer.getChannelData(0));
+      // spectrogram = makeSpectrogram(this.audioBuffer.getChannelData(0));
 
       // Display audio information
       this.displayAudioInfo(file, this.audioBuffer);
@@ -160,7 +162,6 @@ class AudioAnalyzer {
 
       // this.analyser.getByteFrequencyData(dataArray);
       let dataArray = spectrogram[index];
-      console.log(dataArray);
 
       const canvas = this.frequencyCanvas;
       const ctx = this.frequencyCtx;

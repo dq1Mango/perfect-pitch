@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "crypto-browserify": "^3.12.1",
+    "fs": "^0.0.1-security",
+    "golang-wasm": "^0.1.0"
+  },
+  "scripts": {
+    "start": "GOROOT=`go env GOROOT` webpack serve"
+  },
+  "devDependencies": {
+    "webpack": "^5.106.2",
+    "webpack-cli": "^7.0.2",
+    "webpack-dev-server": "^5.2.3"
+  }
+}

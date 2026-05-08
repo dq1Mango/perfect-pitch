@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"syscall/js"
 
 	"github.com/dq1Mango/perfect-pitch/core"
+	"github.com/teamortix/golang-wasm/wasm"
 )
 
 func parseJSArray(array js.Value) []float64 {
@@ -18,39 +20,39 @@ func parseJSArray(array js.Value) []float64 {
 	return parsed
 }
 
-func WrapNewSong(this js.Value, args []js.Value) any {
-	println("wrapping")
-
-	var audio []float64
-
-	if len(args) == 1 {
-		audio = parseJSArray(args[0])
-	} else {
-		println("hey man, u gotta give me a song")
-	}
-
-	song := core.NewSong(audio)
-
-	analyze := js.FuncOf(func(this js.Value, args []js.Value) any {
-		parsed := song.Analyze()
-
-		return parsed.FFT
-	})
-
-	test := js.FuncOf(func(this js.Value, args []js.Value) any {
-		println("test complete")
-		return nil
-	})
-
-	obj := js.Global().Get("Object").New()
-	obj.Set("analyze", analyze)
-	obj.Set("test", test)
-	// obj.Set("decrement", decrement)
-	// obj.Set("get", get)
-
-	return obj
-
-}
+// func WrapNewSong(this js.Value, args []js.Value) any {
+// 	println("wrapping")
+//
+// 	var audio []float64
+//
+// 	if len(args) == 1 {
+// 		audio = parseJSArray(args[0])
+// 	} else {
+// 		println("hey man, u gotta give me a song")
+// 	}
+//
+// 	song := core.NewSong(audio)
+//
+// 	analyze := js.FuncOf(func(this js.Value, args []js.Value) any {
+// 		parsed := song.Analyze()
+//
+// 		return parsed.FFT
+// 	})
+//
+// 	test := js.FuncOf(func(this js.Value, args []js.Value) any {
+// 		println("test complete")
+// 		return nil
+// 	})
+//
+// 	obj := js.Global().Get("Object").New()
+// 	obj.Set("analyze", analyze)
+// 	obj.Set("test", test)
+// 	// obj.Set("decrement", decrement)
+// 	// obj.Set("get", get)
+//
+// 	return obj
+//
+// }
 
 // [][]int -> JS Array of Arrays
 func convertNestedSlice(matrix []core.FreqBins) []any {
@@ -82,13 +84,19 @@ func WrapMakeSpectrogram(this js.Value, args []js.Value) any {
 
 }
 
-func main() {
-	println("also hi")
-	js.Global().Set("testing", js.FuncOf(core.WrapTest))
+const TEST = "wow this is pretty neat"
 
-	js.Global().Set("newSong", js.FuncOf(WrapNewSong))
+func main() {
+	fmt.Println("hello from webpacked")
+
+	wasm.Expose("testString", TEST)
+	// js.Global().Set("testing", js.FuncOf(core.WrapTest))
+
+	// js.Global().Set("newSong", js.FuncOf(WrapNewSong))
 
 	js.Global().Set("makeSpectrogram", js.FuncOf(WrapMakeSpectrogram))
+
+	wasm.Ready()
 
 	select {}
 }
