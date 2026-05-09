@@ -257,6 +257,8 @@ func MakeSpectrogram(audio []float32, fftSize int) *Spectrogram {
 		Data:     make([]FreqBins, 0, hops),
 	}
 
+	maxFreq := 0.0
+
 	hopDex := 0
 	i, j := 0, fftSize
 	for j < len(audio) {
@@ -266,7 +268,15 @@ func MakeSpectrogram(audio []float32, fftSize int) *Spectrogram {
 
 		_ = gofft.FFT(complicated)
 
+		complicated = complicated[:len(complicated)/2]
+
 		usefull, _ := makeFFTUseful(complicated)
+
+		for _, v := range usefull {
+			if v > maxFreq {
+				maxFreq = v
+			}
+		}
 
 		spectrogram.Data = append(spectrogram.Data, usefull)
 
@@ -275,6 +285,22 @@ func MakeSpectrogram(audio []float32, fftSize int) *Spectrogram {
 		i += SAMPLES_PER_HOP
 		j += SAMPLES_PER_HOP
 		hopDex++
+	}
+
+	minDb := -100.0
+
+	maxFreq = float64(len(spectrogram.Data[0]))
+	fmt.Println(maxFreq)
+	for i := range spectrogram.Data {
+		for j, v := range spectrogram.Data[i] {
+
+			// const normalized = magnitude / maxMagnitude;
+			// const db = 20 * Math.log10(normalized + 1e-6);
+			db := 20 * math.Log10(v/maxFreq)
+			db = max(db, minDb)
+			spectrogram.Data[i][j] = (db - minDb) / (0 - minDb)
+			// spectrogram.Data[i][j] = math.Sqrt(v / maxFreq)
+		}
 	}
 
 	fmt.Println("bitches love the (spectro)gram")

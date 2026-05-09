@@ -19,6 +19,22 @@ function gradient(t, colorA, colorB) {
   const b = Math.round(colorA[2] + t * (colorB[2] - colorA[2]));
   return `rgb(${r}, ${g}, ${b})`;
 }
+
+function resizeCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const { width, height } = canvas.getBoundingClientRect();
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+}
+
+// const observer = new ResizeObserver(() => {
+//   const ctx = resizeCanvas(canvas);
+//   // redraw here
+// });
+
 class Spectrogram {
   constructor(canvasId) {
     this.canvas = document.getElementById(canvasId);
@@ -26,10 +42,17 @@ class Spectrogram {
       console.error("Unable to get spectrogram canvas");
     }
 
+    this.observer = new ResizeObserver(() => {
+      resizeCanvas(this.canvas);
+    });
+
+    this.observer.observe(this.canvas);
+
     this.ctx = this.canvas.getContext("2d");
 
     const { width, height } = this.canvas.getBoundingClientRect();
     this.width = width;
+    this.height = height;
 
     // px per second
     this.scale = 20;
@@ -46,6 +69,7 @@ class Spectrogram {
 
     this.colWidth = fft_spacing * this.scale;
     this.rowHeight = 500 / data[0].length;
+    console.log(data[0].length);
   }
 
   colorGradient(t) {
@@ -68,16 +92,20 @@ class Spectrogram {
 
   drawColumn(x, freqBins) {
     let index = 0;
-    let y = 500;
+    let y = this.height;
 
-    while (y >= 0) {
-      // console.log(y, index);
+    while (y >= 0 && index < freqBins.length) {
       const intensity = freqBins[index];
+
+      if (x > 10 && x < 15) {
+        console.log(y, intensity);
+      }
+      // console.log(y, index);
       // console.log(intensity);
 
       if (intensity) {
         this.ctx.fillStyle = this.colorGradient(intensity);
-        this.ctx.fillRect(x, y, this.colWidth, this.rowHeight);
+        this.ctx.fillRect(x, y, this.colWidth, -this.rowHeight);
       }
 
       y -= this.rowHeight;
@@ -95,6 +123,11 @@ class Spectrogram {
       index++;
       console.log("drawing");
     }
+
+    // this.ctx.clearRect(0, 0, 500, 500);
+    //
+    // this.ctx.fillStyle = "blue";
+    // this.ctx.fillRect(0, 0, 100, 100);
   }
 }
 
@@ -161,10 +194,10 @@ class AudioAnalyzer {
       console.log(songOpts);
 
       let analyzed = await wasm.analyzeSong(PCM, songOpts);
-      spectrogram = analyzed.theGram;
+      spectrogram = analyzed.theGram.Data;
 
       console.log(spectrogram);
-      this.spectrogram.loadSong(spectrogram.Data, 144 / 44100);
+      this.spectrogram.loadSong(spectrogram, 144 / 44100);
 
       this.spectrogram.draw();
 
