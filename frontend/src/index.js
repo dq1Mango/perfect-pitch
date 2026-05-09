@@ -13,6 +13,91 @@ console.log(await wasm.testString());
 let spectrogram;
 let index = 0;
 
+function gradient(t, colorA, colorB) {
+  const r = Math.round(colorA[0] + t * (colorB[0] - colorA[0]));
+  const g = Math.round(colorA[1] + t * (colorB[1] - colorA[1]));
+  const b = Math.round(colorA[2] + t * (colorB[2] - colorA[2]));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+class Spectrogram {
+  constructor(canvasId) {
+    this.canvas = document.getElementById(canvasId);
+    if (!this.canvas) {
+      console.error("Unable to get spectrogram canvas");
+    }
+
+    this.ctx = this.canvas.getContext("2d");
+
+    const { width, height } = this.canvas.getBoundingClientRect();
+    this.width = width;
+
+    // px per second
+    this.scale = 20;
+
+    this.head = 0;
+  }
+
+  loadSong(data, fft_spacing) {
+    // this.PCM = song;
+    this.data = data;
+    // this.opts = opts;
+    // spacing is seconds between fft
+    this.fft_spacing = fft_spacing;
+
+    this.colWidth = fft_spacing * this.scale;
+    this.rowHeight = 500 / data[0].length;
+  }
+
+  colorGradient(t) {
+    if (t > 1) {
+      t = 1;
+    }
+
+    const colors = [
+      [0, 0, 0],
+      [128, 0, 128],
+      [255, 0, 0],
+    ];
+
+    const segments = colors.length - 1;
+    const scaled = t * segments;
+    const i = Math.min(Math.floor(scaled), segments - 1);
+    const localT = scaled - i;
+    return gradient(localT, colors[i], colors[i + 1]);
+  }
+
+  drawColumn(x, freqBins) {
+    let index = 0;
+    let y = 500;
+
+    while (y >= 0) {
+      // console.log(y, index);
+      const intensity = freqBins[index];
+      // console.log(intensity);
+
+      if (intensity) {
+        this.ctx.fillStyle = this.colorGradient(intensity);
+        this.ctx.fillRect(x, y, this.colWidth, this.rowHeight);
+      }
+
+      y -= this.rowHeight;
+      index++;
+    }
+  }
+
+  draw() {
+    let x = 0;
+    let index = 0;
+
+    while (x < this.width && index < this.data.length) {
+      this.drawColumn(x, this.data[index]);
+      x += this.colWidth;
+      index++;
+      console.log("drawing");
+    }
+  }
+}
+
 class AudioAnalyzer {
   constructor() {
     this.audioContext = null;
@@ -35,9 +120,9 @@ class AudioAnalyzer {
     this.audioInfo = document.getElementById("audioInfo");
     this.audioDetails = document.getElementById("audioDetails");
     this.frequencyCanvas = document.getElementById("frequencyCanvas");
-    this.waveformCanvas = document.getElementById("waveformCanvas");
     this.frequencyCtx = this.frequencyCanvas.getContext("2d");
-    this.waveformCtx = this.waveformCanvas.getContext("2d");
+
+    this.spectrogram = new Spectrogram("spectrogram");
   }
 
   setupEventListeners() {
@@ -68,9 +153,20 @@ class AudioAnalyzer {
       // let song = newSong(this.audioBuffer.getChannelData(0));
       // song.test();
       // let fft = song.analyze();
-      spectrogram = await wasm.makeSpectrogram([1, 2, 3, 4]);
-      console.log("bruh");
-      spectrogram = await wasm.makeSpectrogram(Array.from(this.audioBuffer.getChannelData(0)));
+      // spectrogram = await wasm.makeSpectrogram(Array.from(this.audioBuffer.getChannelData(0)));
+      //
+
+      const PCM = Array.from(this.audioBuffer.getChannelData(0));
+      let songOpts = await wasm.newAnalysisOpts();
+      console.log(songOpts);
+
+      let analyzed = await wasm.analyzeSong(PCM, songOpts);
+      spectrogram = analyzed.theGram;
+
+      console.log(spectrogram);
+      this.spectrogram.loadSong(spectrogram.Data, 144 / 44100);
+
+      this.spectrogram.draw();
 
       // Display audio information
       this.displayAudioInfo(file, this.audioBuffer);
@@ -78,9 +174,6 @@ class AudioAnalyzer {
       // Enable controls
       this.playButton.disabled = false;
       this.analyzeButton.disabled = false;
-
-      // Draw initial waveform
-      this.drawWaveform();
     } catch (error) {
       alert("Error loading audio file: " + error.message);
     }
@@ -195,44 +288,13 @@ class AudioAnalyzer {
 
     draw();
   }
-
-  drawWaveform() {
-    if (!this.audioBuffer) return;
-
-    const canvas = this.waveformCanvas;
-    const ctx = this.waveformCtx;
-    const data = this.audioBuffer.getChannelData(0); // Get first channel
-
-    ctx.fillStyle = "rgb(0, 0, 0)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = "rgb(0, 255, 0)";
-    ctx.beginPath();
-
-    const sliceWidth = canvas.width / data.length;
-    let x = 0;
-
-    for (let i = 0; i < data.length; i++) {
-      const v = data[i] * 0.5;
-      const y = ((v + 1) * canvas.height) / 2;
-
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-
-      x += sliceWidth;
-    }
-
-    ctx.stroke();
-  }
 }
 
 // Initialize the analyzer when the page loads
-document.addEventListener("DOMContentLoaded", () => {
-  console.log("ah");
-  new AudioAnalyzer();
-});
+// document.addEventListener("DOMContentLoaded", () => {
+//   console.log("ah");
+//   new AudioAnalyzer();
+// });
+//
+
 new AudioAnalyzer();

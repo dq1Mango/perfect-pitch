@@ -95,7 +95,10 @@ func main() {
 	// js.Global().Set("newSong", js.FuncOf(WrapNewSong))
 
 	// js.Global().Set("makeSpectrogram", js.FuncOf(WrapMakeSpectrogram))
-	wasm.Expose("makeSpectrogram", core.MakeSpectrogram)
+	// wasm.Expose("makeSpectrogram", core.MakeSpectrogram)
+
+	wasm.Expose("newAnalysisOpts", core.NewAnalysisOpts)
+	wasm.Expose("analyzeSong", core.AnalyzeSong)
 
 	wasm.Ready()
 

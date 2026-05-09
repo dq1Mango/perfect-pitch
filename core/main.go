@@ -193,12 +193,6 @@ type Song struct {
 	Opts  *SongOpts
 }
 
-type ParsedSong struct {
-	TheGram *Spectrogram
-	Pitches []Pitch
-	Index   int
-}
-
 type FreqBins []float64
 
 type Spectrogram struct {
@@ -224,19 +218,6 @@ func complicate32(arr []float32) []complex128 {
 	}
 
 	return complicated
-}
-
-func (s *Song) Analyze() *ParsedSong {
-
-	spectrogram := MakeSpectrogram([]float32{})
-
-	pitches := spectrogram.PrimaryPitches()
-
-	return &ParsedSong{
-		TheGram: spectrogram,
-		Pitches: pitches,
-		Index:   0,
-	}
 }
 
 func Test() {
@@ -266,17 +247,18 @@ func (s *Song) Test() {
 const FFT_SIZE = 2048
 const SAMPLES_PER_HOP = 44100 / 144
 
-func MakeSpectrogram(audio []float32) *Spectrogram {
+func MakeSpectrogram(audio []float32, fftSize int) *Spectrogram {
 	fmt.Println("all for the (spectro)gram")
 
 	hops := len(audio) / SAMPLES_PER_HOP
 
 	spectrogram := &Spectrogram{
-		BinCount: FFT_SIZE / 2,
-		Data:     make([]FreqBins, hops),
+		BinCount: fftSize / 2,
+		Data:     make([]FreqBins, 0, hops),
 	}
+
 	hopDex := 0
-	i, j := 0, FFT_SIZE
+	i, j := 0, fftSize
 	for j < len(audio) {
 		slice := audio[i:j]
 
@@ -286,7 +268,7 @@ func MakeSpectrogram(audio []float32) *Spectrogram {
 
 		usefull, _ := makeFFTUseful(complicated)
 
-		spectrogram.Data[hopDex] = usefull
+		spectrogram.Data = append(spectrogram.Data, usefull)
 
 		// i += FFT_SIZE
 		// 		j+= FFT_SIZE
@@ -375,7 +357,10 @@ func (p *Pitch) FlatName() string {
 func (sp *Spectrogram) PrimaryPitches() []Pitch {
 	pitches := make([]Pitch, len(sp.Data))
 
+	fmt.Println(len(sp.Data))
+
 	for i, v := range sp.Data {
+		// fmt.Println(i)
 
 		pitches[i] = Pitch(slices.Max(v))
 	}
@@ -383,3 +368,46 @@ func (sp *Spectrogram) PrimaryPitches() []Pitch {
 	return pitches
 
 }
+
+type AnalyzedSample struct {
+	FFT FreqBins
+
+	PrimaryPitch *Pitch
+}
+
+// type ParsedSong []AnalyzedSample
+
+type ParsedSong struct {
+	TheGram *Spectrogram `wasm:"theGram"`
+	Pitches []Pitch      `wasm:"pitches"`
+}
+
+type AnalysisOpts struct {
+	SampleRate float32 `wasm:"sampleRate"`
+	FFTSize    int     `wasm:"fftSize"`
+}
+
+func NewAnalysisOpts() *AnalysisOpts {
+	return &AnalysisOpts{SampleRate: 44100.0, FFTSize: 2048}
+}
+
+// maybe a builder lite pattern who knows really
+func (o *AnalysisOpts) SetSampleRate(rate float32) *AnalysisOpts {
+	o.SampleRate = rate
+	return o
+}
+
+func (o *AnalysisOpts) SetFFTSize(size int) *AnalysisOpts {
+	o.FFTSize = size
+	return o
+}
+
+func AnalyzeSong(pcm []float32, opts *AnalysisOpts) *ParsedSong {
+	spectrogram := MakeSpectrogram(pcm, opts.FFTSize)
+
+	primaryPitches := spectrogram.PrimaryPitches()
+
+	return &ParsedSong{TheGram: spectrogram, Pitches: primaryPitches}
+}
+
+// }

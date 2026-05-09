@@ -26,7 +26,7 @@ eval("{__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpa
   \*********************/
 (__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
-eval("{__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => (__WEBPACK_DEFAULT_EXPORT__)\n/* harmony export */ });\n/* harmony import */ var _home_mqngo_Coding_go_perfect_pitch_frontend_node_modules_golang_wasm_src_bridge_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/golang-wasm/src/bridge.js */ \"./node_modules/golang-wasm/src/bridge.js\");\n__webpack_require__(/*! !./node_modules/golang-wasm/src/wasm_exec.js */ \"./node_modules/golang-wasm/src/wasm_exec.js\");\n\n\nconst wasm = fetch('main.wasm').then(response => response.arrayBuffer());\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ((0,_home_mqngo_Coding_go_perfect_pitch_frontend_node_modules_golang_wasm_src_bridge_js__WEBPACK_IMPORTED_MODULE_0__[\"default\"])(wasm));\n\n//# sourceURL=webpack:///./src/main.go?\n}");
+eval("{__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   \"default\": () => (__WEBPACK_DEFAULT_EXPORT__)\n/* harmony export */ });\n/* harmony import */ var _home_dq1mango_Coding_Go_perfect_pitch_frontend_node_modules_golang_wasm_src_bridge_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./node_modules/golang-wasm/src/bridge.js */ \"./node_modules/golang-wasm/src/bridge.js\");\n__webpack_require__(/*! !./node_modules/golang-wasm/src/wasm_exec.js */ \"./node_modules/golang-wasm/src/wasm_exec.js\");\n\n\nconst wasm = fetch('main.wasm').then(response => response.arrayBuffer());\n/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ((0,_home_dq1mango_Coding_Go_perfect_pitch_frontend_node_modules_golang_wasm_src_bridge_js__WEBPACK_IMPORTED_MODULE_0__[\"default\"])(wasm));\n\n//# sourceURL=webpack:///./src/main.go?\n}");
 
 /***/ },
 
@@ -44,9 +44,9 @@ eval("{// Copyright 2018 The Go Authors. All rights reserved.\n// Use of this so
 /*!**********************!*\
   !*** ./src/index.js ***!
   \**********************/
-(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+(module, __webpack_exports__, __webpack_require__) {
 
-eval("{__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _main_go__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./main.go */ \"./src/main.go\");\n\n\n// const go = new Go();\n// WebAssembly.instantiateStreaming(fetch(\"main.wasm\"), go.importObject).then((result) => {\n//   go.run(result.instance);\n//\n//   testing();\n//   //result.instance.exports.Init()\n// });\n//\nlet spectrogram;\nlet index = 0;\n\nclass AudioAnalyzer {\n  constructor() {\n    this.audioContext = null;\n    this.audioBuffer = null;\n    this.source = null;\n    this.analyser = null;\n    this.isPlaying = false;\n    this.animationId = null;\n\n    this.initializeElements();\n    this.setupEventListeners();\n  }\n\n  initializeElements() {\n    this.fileInput = document.getElementById(\"audioFile\");\n    this.playButton = document.getElementById(\"playButton\");\n    this.pauseButton = document.getElementById(\"pauseButton\");\n    this.analyzeButton = document.getElementById(\"analyzeButton\");\n    this.audioInfo = document.getElementById(\"audioInfo\");\n    this.audioDetails = document.getElementById(\"audioDetails\");\n    this.frequencyCanvas = document.getElementById(\"frequencyCanvas\");\n    this.waveformCanvas = document.getElementById(\"waveformCanvas\");\n    this.frequencyCtx = this.frequencyCanvas.getContext(\"2d\");\n    this.waveformCtx = this.waveformCanvas.getContext(\"2d\");\n  }\n\n  setupEventListeners() {\n    this.fileInput.addEventListener(\"change\", (e) => this.handleFileSelect(e));\n    this.playButton.addEventListener(\"click\", () => this.playAudio());\n    this.pauseButton.addEventListener(\"click\", () => this.pauseAudio());\n    this.analyzeButton.addEventListener(\"click\", () => this.startAnalysis());\n  }\n\n  async handleFileSelect(event) {\n    const file = event.target.files[0];\n    if (!file) return;\n\n    try {\n      // Initialize audio context if not already done\n      if (!this.audioContext) {\n        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();\n      }\n\n      // Read file as array buffer\n      const arrayBuffer = await file.arrayBuffer();\n\n      // Decode audio data\n      this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);\n\n      // rawPCM = this.audioBuffer.getChannelData(0);\n\n      // let song = newSong(this.audioBuffer.getChannelData(0));\n      // song.test();\n      // let fft = song.analyze();\n\n      // spectrogram = makeSpectrogram(this.audioBuffer.getChannelData(0));\n\n      // Display audio information\n      this.displayAudioInfo(file, this.audioBuffer);\n\n      // Enable controls\n      this.playButton.disabled = false;\n      this.analyzeButton.disabled = false;\n\n      // Draw initial waveform\n      this.drawWaveform();\n    } catch (error) {\n      alert(\"Error loading audio file: \" + error.message);\n    }\n  }\n\n  displayAudioInfo(file, buffer) {\n    const duration = buffer.duration.toFixed(2);\n    const sampleRate = buffer.sampleRate;\n    const channels = buffer.numberOfChannels;\n    const size = (file.size / 1024 / 1024).toFixed(2);\n\n    this.audioDetails.innerHTML = `\n                    <p><strong>File:</strong> ${file.name}</p>\n                    <p><strong>Duration:</strong> ${duration} seconds</p>\n                    <p><strong>Sample Rate:</strong> ${sampleRate} Hz</p>\n                    <p><strong>Channels:</strong> ${channels}</p>\n                    <p><strong>File Size:</strong> ${size} MB</p>\n                `;\n\n    this.audioInfo.classList.remove(\"hidden\");\n  }\n\n  playAudio() {\n    if (this.isPlaying) return;\n\n    this.source = this.audioContext.createBufferSource();\n    this.source.buffer = this.audioBuffer;\n    this.source.connect(this.audioContext.destination);\n\n    this.source.start();\n    this.isPlaying = true;\n    this.playButton.disabled = true;\n    this.pauseButton.disabled = false;\n\n    this.source.onended = () => {\n      this.isPlaying = false;\n      this.playButton.disabled = false;\n      this.pauseButton.disabled = true;\n    };\n  }\n\n  pauseAudio() {\n    if (this.source && this.isPlaying) {\n      this.source.stop();\n      this.isPlaying = false;\n      this.playButton.disabled = false;\n      this.pauseButton.disabled = true;\n    }\n  }\n\n  startAnalysis() {\n    if (!this.audioBuffer) return;\n\n    // Create analyser node\n    this.analyser = this.audioContext.createAnalyser();\n    this.analyser.fftSize = 2048;\n\n    // Create a new source for analysis\n    const source = this.audioContext.createBufferSource();\n    source.buffer = this.audioBuffer;\n    source.connect(this.analyser);\n    this.analyser.connect(this.audioContext.destination);\n\n    // Start analysis visualization\n    this.visualizeFrequency();\n\n    // Play for analysis\n    source.start();\n    source.onended = () => {\n      if (this.animationId) {\n        cancelAnimationFrame(this.animationId);\n      }\n    };\n  }\n\n  visualizeFrequency() {\n    // const bufferLength = this.analyser.frequencyBinCount;\n    const bufferLength = 1024;\n    // const dataArray = new Uint8Array(bufferLength);\n\n    const draw = () => {\n      this.animationId = requestAnimationFrame(draw);\n\n      // this.analyser.getByteFrequencyData(dataArray);\n      let dataArray = spectrogram[index];\n\n      const canvas = this.frequencyCanvas;\n      const ctx = this.frequencyCtx;\n\n      ctx.fillStyle = \"rgb(0, 0, 0)\";\n      ctx.fillRect(0, 0, canvas.width, canvas.height);\n\n      const barWidth = (canvas.width / bufferLength) * 2.5;\n      let barHeight;\n      let x = 0;\n\n      for (let i = 0; i < bufferLength; i++) {\n        barHeight = (dataArray[i] / 255) * canvas.height;\n\n        const r = barHeight + 25 * (i / bufferLength);\n        const g = 250 * (i / bufferLength);\n        const b = 50;\n\n        ctx.fillStyle = `rgb(${r},${g},${b})`;\n        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);\n\n        x += barWidth + 1;\n      }\n\n      index++;\n    };\n\n    draw();\n  }\n\n  drawWaveform() {\n    if (!this.audioBuffer) return;\n\n    const canvas = this.waveformCanvas;\n    const ctx = this.waveformCtx;\n    const data = this.audioBuffer.getChannelData(0); // Get first channel\n\n    ctx.fillStyle = \"rgb(0, 0, 0)\";\n    ctx.fillRect(0, 0, canvas.width, canvas.height);\n\n    ctx.lineWidth = 1;\n    ctx.strokeStyle = \"rgb(0, 255, 0)\";\n    ctx.beginPath();\n\n    const sliceWidth = canvas.width / data.length;\n    let x = 0;\n\n    for (let i = 0; i < data.length; i++) {\n      const v = data[i] * 0.5;\n      const y = ((v + 1) * canvas.height) / 2;\n\n      if (i === 0) {\n        ctx.moveTo(x, y);\n      } else {\n        ctx.lineTo(x, y);\n      }\n\n      x += sliceWidth;\n    }\n\n    ctx.stroke();\n  }\n}\n\n// Initialize the analyzer when the page loads\ndocument.addEventListener(\"DOMContentLoaded\", () => {\n  new AudioAnalyzer();\n});\n\n\n//# sourceURL=webpack:///./src/index.js?\n}");
+eval("{__webpack_require__.a(module, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {\n__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _main_go__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./main.go */ \"./src/main.go\");\n\n\nconsole.log(await _main_go__WEBPACK_IMPORTED_MODULE_0__[\"default\"].testString());\n\n// const go = new Go();\n// WebAssembly.instantiateStreaming(fetch(\"main.wasm\"), go.importObject).then((result) => {\n//   go.run(result.instance);\n//\n//   testing();\n//   //result.instance.exports.Init()\n// });\n//\nlet spectrogram;\nlet index = 0;\n\nclass AudioAnalyzer {\n  constructor() {\n    this.audioContext = null;\n    this.audioBuffer = null;\n    this.source = null;\n    this.analyser = null;\n    this.isPlaying = false;\n    this.animationId = null;\n\n    this.initializeElements();\n    this.setupEventListeners();\n  }\n\n  initializeElements() {\n    this.fileInput = document.getElementById(\"audioFile\");\n    console.log(this.fileInput);\n    this.playButton = document.getElementById(\"playButton\");\n    this.pauseButton = document.getElementById(\"pauseButton\");\n    this.analyzeButton = document.getElementById(\"analyzeButton\");\n    this.audioInfo = document.getElementById(\"audioInfo\");\n    this.audioDetails = document.getElementById(\"audioDetails\");\n    this.frequencyCanvas = document.getElementById(\"frequencyCanvas\");\n    this.waveformCanvas = document.getElementById(\"waveformCanvas\");\n    this.frequencyCtx = this.frequencyCanvas.getContext(\"2d\");\n    this.waveformCtx = this.waveformCanvas.getContext(\"2d\");\n  }\n\n  setupEventListeners() {\n    this.fileInput.addEventListener(\"change\", (e) => this.handleFileSelect(e));\n    this.playButton.addEventListener(\"click\", () => this.playAudio());\n    this.pauseButton.addEventListener(\"click\", () => this.pauseAudio());\n    this.analyzeButton.addEventListener(\"click\", () => this.startAnalysis());\n  }\n\n  async handleFileSelect(event) {\n    const file = event.target.files[0];\n    if (!file) return;\n\n    try {\n      // Initialize audio context if not already done\n      if (!this.audioContext) {\n        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();\n      }\n\n      // Read file as array buffer\n      const arrayBuffer = await file.arrayBuffer();\n\n      // Decode audio data\n      this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);\n\n      // rawPCM = this.audioBuffer.getChannelData(0);\n\n      // let song = newSong(this.audioBuffer.getChannelData(0));\n      // song.test();\n      // let fft = song.analyze();\n      spectrogram = await _main_go__WEBPACK_IMPORTED_MODULE_0__[\"default\"].makeSpectrogram([1, 2, 3, 4]);\n      console.log(\"bruh\");\n      spectrogram = await _main_go__WEBPACK_IMPORTED_MODULE_0__[\"default\"].makeSpectrogram(Array.from(this.audioBuffer.getChannelData(0)));\n\n      // Display audio information\n      this.displayAudioInfo(file, this.audioBuffer);\n\n      // Enable controls\n      this.playButton.disabled = false;\n      this.analyzeButton.disabled = false;\n\n      // Draw initial waveform\n      this.drawWaveform();\n    } catch (error) {\n      alert(\"Error loading audio file: \" + error.message);\n    }\n  }\n\n  displayAudioInfo(file, buffer) {\n    const duration = buffer.duration.toFixed(2);\n    const sampleRate = buffer.sampleRate;\n    const channels = buffer.numberOfChannels;\n    const size = (file.size / 1024 / 1024).toFixed(2);\n\n    this.audioDetails.innerHTML = `\n                    <p><strong>File:</strong> ${file.name}</p>\n                    <p><strong>Duration:</strong> ${duration} seconds</p>\n                    <p><strong>Sample Rate:</strong> ${sampleRate} Hz</p>\n                    <p><strong>Channels:</strong> ${channels}</p>\n                    <p><strong>File Size:</strong> ${size} MB</p>\n                `;\n\n    this.audioInfo.classList.remove(\"hidden\");\n  }\n\n  playAudio() {\n    if (this.isPlaying) return;\n\n    this.source = this.audioContext.createBufferSource();\n    this.source.buffer = this.audioBuffer;\n    this.source.connect(this.audioContext.destination);\n\n    this.source.start();\n    this.isPlaying = true;\n    this.playButton.disabled = true;\n    this.pauseButton.disabled = false;\n\n    this.source.onended = () => {\n      this.isPlaying = false;\n      this.playButton.disabled = false;\n      this.pauseButton.disabled = true;\n    };\n  }\n\n  pauseAudio() {\n    if (this.source && this.isPlaying) {\n      this.source.stop();\n      this.isPlaying = false;\n      this.playButton.disabled = false;\n      this.pauseButton.disabled = true;\n    }\n  }\n\n  startAnalysis() {\n    if (!this.audioBuffer) return;\n\n    // Create analyser node\n    this.analyser = this.audioContext.createAnalyser();\n    this.analyser.fftSize = 2048;\n\n    // Create a new source for analysis\n    const source = this.audioContext.createBufferSource();\n    source.buffer = this.audioBuffer;\n    source.connect(this.analyser);\n    this.analyser.connect(this.audioContext.destination);\n\n    // Start analysis visualization\n    this.visualizeFrequency();\n\n    // Play for analysis\n    source.start();\n    source.onended = () => {\n      if (this.animationId) {\n        cancelAnimationFrame(this.animationId);\n      }\n    };\n  }\n\n  visualizeFrequency() {\n    // const bufferLength = this.analyser.frequencyBinCount;\n    const bufferLength = 1024;\n    // const dataArray = new Uint8Array(bufferLength);\n\n    const draw = () => {\n      this.animationId = requestAnimationFrame(draw);\n\n      // this.analyser.getByteFrequencyData(dataArray);\n      let dataArray = spectrogram[index];\n\n      const canvas = this.frequencyCanvas;\n      const ctx = this.frequencyCtx;\n\n      ctx.fillStyle = \"rgb(0, 0, 0)\";\n      ctx.fillRect(0, 0, canvas.width, canvas.height);\n\n      const barWidth = (canvas.width / bufferLength) * 2.5;\n      let barHeight;\n      let x = 0;\n\n      for (let i = 0; i < bufferLength; i++) {\n        barHeight = (dataArray[i] / 255) * canvas.height;\n\n        const r = barHeight + 25 * (i / bufferLength);\n        const g = 250 * (i / bufferLength);\n        const b = 50;\n\n        ctx.fillStyle = `rgb(${r},${g},${b})`;\n        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);\n\n        x += barWidth + 1;\n      }\n\n      index++;\n    };\n\n    draw();\n  }\n\n  drawWaveform() {\n    if (!this.audioBuffer) return;\n\n    const canvas = this.waveformCanvas;\n    const ctx = this.waveformCtx;\n    const data = this.audioBuffer.getChannelData(0); // Get first channel\n\n    ctx.fillStyle = \"rgb(0, 0, 0)\";\n    ctx.fillRect(0, 0, canvas.width, canvas.height);\n\n    ctx.lineWidth = 1;\n    ctx.strokeStyle = \"rgb(0, 255, 0)\";\n    ctx.beginPath();\n\n    const sliceWidth = canvas.width / data.length;\n    let x = 0;\n\n    for (let i = 0; i < data.length; i++) {\n      const v = data[i] * 0.5;\n      const y = ((v + 1) * canvas.height) / 2;\n\n      if (i === 0) {\n        ctx.moveTo(x, y);\n      } else {\n        ctx.lineTo(x, y);\n      }\n\n      x += sliceWidth;\n    }\n\n    ctx.stroke();\n  }\n}\n\n// Initialize the analyzer when the page loads\ndocument.addEventListener(\"DOMContentLoaded\", () => {\n  console.log(\"ah\");\n  new AudioAnalyzer();\n});\nnew AudioAnalyzer();\n\n__webpack_async_result__();\n} catch(e) { __webpack_async_result__(e); } }, 1);\n\n//# sourceURL=webpack:///./src/index.js?\n}");
 
 /***/ }
 
@@ -83,6 +83,82 @@ eval("{__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _ma
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/async module */
+/******/ 	(() => {
+/******/ 		var hasSymbol = typeof Symbol === "function";
+/******/ 		var webpackQueues = hasSymbol ? Symbol("webpack queues") : "__webpack_queues__";
+/******/ 		var webpackExports = hasSymbol ? Symbol("webpack exports") : "__webpack_exports__";
+/******/ 		var webpackError = hasSymbol ? Symbol("webpack error") : "__webpack_error__";
+/******/ 		
+/******/ 		var resolveQueue = (queue) => {
+/******/ 			if(queue && queue.d < 1) {
+/******/ 				queue.d = 1;
+/******/ 				queue.forEach((fn) => (fn.r--));
+/******/ 				queue.forEach((fn) => (fn.r-- ? fn.r++ : fn()));
+/******/ 			}
+/******/ 		}
+/******/ 		var wrapDeps = (deps) => (deps.map((dep) => {
+/******/ 			if(dep !== null && typeof dep === "object") {
+/******/ 		
+/******/ 				if(dep[webpackQueues]) return dep;
+/******/ 				if(dep.then) {
+/******/ 					var queue = [];
+/******/ 					queue.d = 0;
+/******/ 					dep.then((r) => {
+/******/ 						obj[webpackExports] = r;
+/******/ 						resolveQueue(queue);
+/******/ 					}, (e) => {
+/******/ 						obj[webpackError] = e;
+/******/ 						resolveQueue(queue);
+/******/ 					});
+/******/ 					var obj = {};
+/******/ 		
+/******/ 					obj[webpackQueues] = (fn) => (fn(queue));
+/******/ 					return obj;
+/******/ 				}
+/******/ 			}
+/******/ 			var ret = {};
+/******/ 			ret[webpackQueues] = x => {};
+/******/ 			ret[webpackExports] = dep;
+/******/ 			return ret;
+/******/ 		}));
+/******/ 		__webpack_require__.a = (module, body, hasAwait) => {
+/******/ 			var queue;
+/******/ 			hasAwait && ((queue = []).d = -1);
+/******/ 			var depQueues = new Set();
+/******/ 			var exports = module.exports;
+/******/ 			var currentDeps;
+/******/ 			var outerResolve;
+/******/ 			var reject;
+/******/ 			var promise = new Promise((resolve, rej) => {
+/******/ 				reject = rej;
+/******/ 				outerResolve = resolve;
+/******/ 			});
+/******/ 			promise[webpackExports] = exports;
+/******/ 			promise[webpackQueues] = (fn) => (queue && fn(queue), depQueues.forEach(fn), promise["catch"](x => {}));
+/******/ 			module.exports = promise;
+/******/ 			var handle = (deps) => {
+/******/ 				currentDeps = wrapDeps(deps);
+/******/ 				var fn;
+/******/ 				var getResult = () => (currentDeps.map((d) => {
+/******/ 		
+/******/ 					if(d[webpackError]) throw d[webpackError];
+/******/ 					return d[webpackExports];
+/******/ 				}))
+/******/ 				var promise = new Promise((resolve) => {
+/******/ 					fn = () => (resolve(getResult));
+/******/ 					fn.r = 0;
+/******/ 					var fnQueue = (q) => (q !== queue && !depQueues.has(q) && (depQueues.add(q), q && !q.d && (fn.r++, q.push(fn))));
+/******/ 					currentDeps.map((dep) => (dep[webpackQueues](fnQueue)));
+/******/ 				});
+/******/ 				return fn.r ? promise : getResult();
+/******/ 			}
+/******/ 			var done = (err) => ((err ? reject(promise[webpackError] = err) : outerResolve(exports)), resolveQueue(queue))
+/******/ 			body(handle, done);
+/******/ 			queue && queue.d < 0 && (queue.d = 0);
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/define property getters */
 /******/ 	(() => {
 /******/ 		// define getter functions for harmony exports
