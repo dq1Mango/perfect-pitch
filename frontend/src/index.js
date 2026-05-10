@@ -13,6 +13,10 @@ console.log(await wasm.testString());
 let spectrogram;
 let index = 0;
 
+const MAX_DB = -20;
+const MIN_DB = -80;
+const MAX_FREQ = 6e3;
+
 function gradient(t, colorA, colorB) {
   const r = Math.round(colorA[0] + t * (colorB[0] - colorA[0]));
   const g = Math.round(colorA[1] + t * (colorB[1] - colorA[1]));
@@ -28,6 +32,12 @@ function resizeCanvas(canvas) {
   const ctx = canvas.getContext("2d");
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(dpr, dpr);
+}
+
+function normalizeDb(db) {
+  db = Math.min(MAX_DB, Math.max(MIN_DB, db));
+
+  return (db - MIN_DB) / (MAX_DB - MIN_DB);
 }
 
 // const observer = new ResizeObserver(() => {
@@ -60,15 +70,18 @@ class Spectrogram {
     this.head = 0;
   }
 
-  loadSong(data, fft_spacing) {
+  loadSong(data, opts) {
     // this.PCM = song;
     this.data = data;
     // this.opts = opts;
     // spacing is seconds between fft
-    this.fft_spacing = fft_spacing;
+    this.fft_spacing = opts.fftSpacing;
 
-    this.colWidth = fft_spacing * this.scale;
-    this.rowHeight = 500 / data[0].length;
+    this.colWidth = opts.fftSpacing * this.scale;
+    const theoreticalMax = opts.sampleRate / 2;
+    const maxFreq = Math.min(MAX_FREQ, theoreticalMax);
+    const analyzedFreqs = opts.fftSize * (maxFreq / theoreticalMax);
+    this.rowHeight = this.height / analyzedFreqs;
     console.log(data[0].length);
   }
 
@@ -80,7 +93,7 @@ class Spectrogram {
     const colors = [
       [0, 0, 0],
       [128, 0, 128],
-      [255, 0, 0],
+      [255, 255, 0],
     ];
 
     const segments = colors.length - 1;
@@ -97,14 +110,10 @@ class Spectrogram {
     while (y >= 0 && index < freqBins.length) {
       const intensity = freqBins[index];
 
-      if (x > 10 && x < 15) {
-        console.log(y, intensity);
-      }
-      // console.log(y, index);
-      // console.log(intensity);
+      const normalized = normalizeDb(intensity);
 
       if (intensity) {
-        this.ctx.fillStyle = this.colorGradient(intensity);
+        this.ctx.fillStyle = this.colorGradient(normalized);
         this.ctx.fillRect(x, y, this.colWidth, -this.rowHeight);
       }
 
@@ -117,12 +126,14 @@ class Spectrogram {
     let x = 0;
     let index = 0;
 
+    console.log("drawing");
     while (x < this.width && index < this.data.length) {
       this.drawColumn(x, this.data[index]);
       x += this.colWidth;
       index++;
-      console.log("drawing");
     }
+
+    console.log("done");
 
     // this.ctx.clearRect(0, 0, 500, 500);
     //
@@ -146,7 +157,6 @@ class AudioAnalyzer {
 
   initializeElements() {
     this.fileInput = document.getElementById("audioFile");
-    console.log(this.fileInput);
     this.playButton = document.getElementById("playButton");
     this.pauseButton = document.getElementById("pauseButton");
     this.analyzeButton = document.getElementById("analyzeButton");
@@ -196,8 +206,7 @@ class AudioAnalyzer {
       let analyzed = await wasm.analyzeSong(PCM, songOpts);
       spectrogram = analyzed.theGram.Data;
 
-      console.log(spectrogram);
-      this.spectrogram.loadSong(spectrogram, 144 / 44100);
+      this.spectrogram.loadSong(spectrogram, songOpts);
 
       this.spectrogram.draw();
 

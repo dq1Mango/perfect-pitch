@@ -197,6 +197,7 @@ type FreqBins []float64
 
 type Spectrogram struct {
 	Data     []FreqBins
+	MaxDb    float64
 	BinCount int
 }
 
@@ -287,21 +288,30 @@ func MakeSpectrogram(audio []float32, fftSize int) *Spectrogram {
 		hopDex++
 	}
 
-	minDb := -100.0
+	// minDb := -80.0
+	// maxDb := -20.0
 
-	maxFreq = float64(len(spectrogram.Data[0]))
+	maxDb := math.Inf(-1)
+
+	maxTheoreticlFreq := float64(len(spectrogram.Data[0]))
 	fmt.Println(maxFreq)
 	for i := range spectrogram.Data {
 		for j, v := range spectrogram.Data[i] {
 
 			// const normalized = magnitude / maxMagnitude;
 			// const db = 20 * Math.log10(normalized + 1e-6);
-			db := 20 * math.Log10(v/maxFreq)
-			db = max(db, minDb)
-			spectrogram.Data[i][j] = (db - minDb) / (0 - minDb)
+			db := 20 * math.Log10(v/maxTheoreticlFreq)
+			if db > maxDb {
+				maxDb = db
+			}
+			// db = max(minDb, min(maxDb, db))
+			// spectrogram.Data[i][j] = (db - minDb) / (maxDb - minDb)
+			spectrogram.Data[i][j] = db
 			// spectrogram.Data[i][j] = math.Sqrt(v / maxFreq)
 		}
 	}
+
+	spectrogram.MaxDb = maxDb
 
 	fmt.Println("bitches love the (spectro)gram")
 
@@ -411,10 +421,11 @@ type ParsedSong struct {
 type AnalysisOpts struct {
 	SampleRate float32 `wasm:"sampleRate"`
 	FFTSize    int     `wasm:"fftSize"`
+	FFTSpacing float32 `wasm:"fftSpacing"`
 }
 
 func NewAnalysisOpts() *AnalysisOpts {
-	return &AnalysisOpts{SampleRate: 44100.0, FFTSize: 2048}
+	return &AnalysisOpts{SampleRate: 44100.0, FFTSize: 2048, FFTSpacing: 144 / 44100.0}
 }
 
 // maybe a builder lite pattern who knows really
