@@ -2,20 +2,66 @@ import wasm from "./main.go";
 
 console.log(await wasm.testString());
 
-// const go = new Go();
-// WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then((result) => {
-//   go.run(result.instance);
-//
-//   testing();
-//   //result.instance.exports.Init()
-// });
-//
+const fill = getComputedStyle(document.documentElement).getPropertyValue("--fill-color").trim();
+const track = getComputedStyle(document.documentElement).getPropertyValue("--track-color").trim();
+
+let state = {
+  MAX_DB: -20,
+  MIN_DB: -80,
+  MAX_FREQ: 6e3,
+};
+
+const sliderNames = [
+  { id: "max-db", display: "val-max-db", units: "dB", key: "MAX_DB" },
+  { id: "min-db", display: "val-min-db", units: "dB", key: "MIN_DB" },
+  { id: "max-freq", display: "val-max-freq", units: "kHz", key: "MAX_FREQ" },
+];
+
+const sliders = sliderNames.map(({ id, display, units, key }) => ({
+  input: document.getElementById(id),
+  display: document.getElementById(display),
+  units: units,
+  key: key,
+}));
+// name + "hi";
+
+console.log(sliders);
+
+// const sliders = [
+//   { input: document.getElementById("s1"), display: document.getElementById("val1") },
+//   { input: document.getElementById("s2"), display: document.getElementById("val2") },
+//   { input: document.getElementById("s3"), display: document.getElementById("val3") },
+// ];
+
+function updateSlider({ input, display, units, key }) {
+  const max = input.max;
+  const min = input.min;
+  const pct = ((input.value - min) / (max - min)) * 100;
+  display.textContent = input.value + units;
+  input.style.background = `linear-gradient(90deg, ${fill} ${pct}%, ${track} ${pct}%)`;
+
+  state[key] = input.value;
+}
+
+sliders.forEach((s) => {
+  if (!s.input || !s.display) {
+    console.warn("undefined slider");
+    return;
+  }
+
+  s.input.addEventListener("input", () => updateSlider(s));
+
+  state[s.key] = s.input.value;
+
+  updateSlider(s);
+});
+
 let spectrogram;
 let index = 0;
 
-const MAX_DB = -20;
-const MIN_DB = -80;
-const MAX_FREQ = 6e3;
+// const MAX_DB = -20;
+// const MIN_DB = -80;
+// const MAX_FREQ = 6e3;
 
 function gradient(t, colorA, colorB) {
   const r = Math.round(colorA[0] + t * (colorB[0] - colorA[0]));
@@ -35,9 +81,9 @@ function resizeCanvas(canvas) {
 }
 
 function normalizeDb(db) {
-  db = Math.min(MAX_DB, Math.max(MIN_DB, db));
+  db = Math.min(state.MAX_DB, Math.max(state.MIN_DB, db));
 
-  return (db - MIN_DB) / (MAX_DB - MIN_DB);
+  return (db - state.MIN_DB) / (state.MAX_DB - state.MIN_DB);
 }
 
 // const observer = new ResizeObserver(() => {
@@ -79,7 +125,8 @@ class Spectrogram {
 
     this.colWidth = opts.fftSpacing * this.scale;
     const theoreticalMax = opts.sampleRate / 2;
-    const maxFreq = Math.min(MAX_FREQ, theoreticalMax);
+    // this is not great, i think we should go back
+    const maxFreq = Math.min(state.MAX_FREQ * 1000, theoreticalMax);
     const analyzedFreqs = opts.fftSize * (maxFreq / theoreticalMax);
     this.rowHeight = this.height / analyzedFreqs;
     console.log(data[0].length);
@@ -123,6 +170,8 @@ class Spectrogram {
   }
 
   draw() {
+    console.log(state.MAX_DB, state.MIN_DB, state.MAX_FREQ);
+
     let x = 0;
     let index = 0;
 
