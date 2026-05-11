@@ -388,4 +388,10 @@ class AudioAnalyzer {
 // });
 //
 
-new AudioAnalyzer();
+let analyzer = new AudioAnalyzer();
+
+const button = document.getElementById("redraw");
+
+button.addEventListener("click", () => {
+  analyzer.spectrogram.draw();
+});
