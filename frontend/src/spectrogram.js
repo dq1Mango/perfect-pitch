@@ -1,7 +1,10 @@
 // import resizeCanvas from "./util.js";
+import webgl from "./webgl.js";
 //
 const fill = getComputedStyle(document.documentElement).getPropertyValue("--fill-color").trim();
 const track = getComputedStyle(document.documentElement).getPropertyValue("--track-color").trim();
+
+const dpr = window.devicePixelRatio || 1;
 
 function resizeCanvas(canvas) {
   const dpr = window.devicePixelRatio || 1;
@@ -41,8 +44,29 @@ export class Spectrogram {
       console.error("Unable to get spectrogram canvas");
     }
 
-    this.observer = new ResizeObserver(() => {
-      resizeCanvas(this.canvas);
+    this.gl = this.canvas.getContext("webgl");
+
+    // this.observer = new ResizeObserver(() => {
+    //   resizeCanvas(this.canvas);
+    // });
+
+    this.observer = new ResizeObserver((entries) => {
+      const canvas = this.canvas;
+
+      for (const entry of entries) {
+        const width =
+          entry.devicePixelContentBoxSize?.[0].inlineSize ??
+          entry.contentBoxSize[0].inlineSize * dpr;
+        const height =
+          entry.devicePixelContentBoxSize?.[0].blockSize ??
+          entry.contentBoxSize[0].blockSize * dpr;
+
+        canvas.width = Math.round(width);
+        canvas.height = Math.round(height);
+
+        // update the WebGL viewport to match
+        this.gl.viewport(0, 0, canvas.width, canvas.height);
+      }
     });
 
     this.observer.observe(this.canvas);
@@ -59,6 +83,67 @@ export class Spectrogram {
     this.head = 0;
 
     this.initializeSliders();
+  }
+
+  async initWebGl() {
+    const [testVertSrc, testFragSrc] = await Promise.all([
+      webgl.loadShader("shaders/test.vert"),
+      webgl.loadShader("shaders/test.frag"),
+    ]);
+    //
+    // const simulationProgram = gl.createProgram();
+    //
+    // const simVert = compileShader(gl, gl.VERTEX_SHADER, simVertSrc);
+    // gl.attachShader(simulationProgram, simVert);
+
+    //const renderProgram = createProgram(gl, renderVertSrc, renderFragSrc);
+    //
+
+    // testing
+
+    const testProgram = createProgram(gl, testVertSrc, testFragSrc);
+    gl.useProgram(testProgram);
+
+    const aPosition = 0;
+    const aSize = 1;
+    const aColor = 2;
+
+    let dataData = [
+      [0, 0, 50, 1, 0, 0],
+      [0.5, 0, 50, 0, 1, 0],
+      [0, 0, 100, 0, 0, 1],
+    ];
+
+    let iSuckAtJS = [];
+
+    for (data of dataData) {
+      iSuckAtJS = iSuckAtJS.concat(data);
+    }
+    // console.log(iSuckAtJS);
+    let vertData = new Float32Array(iSuckAtJS);
+
+    const vertBuffer = gl.createBuffer();
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertData, gl.STATIC_DRAW);
+
+    const STRIDE = 2 * 4 + 1 * 4 + 3 * 4;
+
+    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, STRIDE, 0);
+    gl.vertexAttribPointer(aSize, 1, gl.FLOAT, false, STRIDE, 2 * 4);
+    gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, STRIDE, 2 * 4 + 4);
+
+    gl.enableVertexAttribArray(aPosition);
+    gl.enableVertexAttribArray(aColor);
+    gl.enableVertexAttribArray(aSize);
+
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    initialized = true;
+    draw(dataData.length);
+    // gl.drawArrays(gl.POINTS, 0, dataData.length);
   }
 
   initializeSliders() {
