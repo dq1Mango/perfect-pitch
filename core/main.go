@@ -294,7 +294,6 @@ func MakeSpectrogram(audio []float32, fftSize int) *Spectrogram {
 	maxDb := math.Inf(-1)
 
 	maxTheoreticlFreq := float64(len(spectrogram.Data[0]))
-	fmt.Println(maxFreq)
 	for i := range spectrogram.Data {
 		for j, v := range spectrogram.Data[i] {
 
@@ -393,10 +392,7 @@ func (p *Pitch) FlatName() string {
 func (sp *Spectrogram) PrimaryPitches() []Pitch {
 	pitches := make([]Pitch, len(sp.Data))
 
-	fmt.Println(len(sp.Data))
-
 	for i, v := range sp.Data {
-		// fmt.Println(i)
 
 		pitches[i] = Pitch(slices.Max(v))
 	}

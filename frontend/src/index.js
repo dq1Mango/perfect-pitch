@@ -1,9 +1,9 @@
 import wasm from "./main.go";
 
-console.log(await wasm.testString());
+import { Spectrogram } from "./spectrogram.js";
+// import resizeCanvas from "./util.js";
 
-const fill = getComputedStyle(document.documentElement).getPropertyValue("--fill-color").trim();
-const track = getComputedStyle(document.documentElement).getPropertyValue("--track-color").trim();
+console.log(await wasm.testString());
 
 // const sliders = [
 //   { input: document.getElementById("s1"), display: document.getElementById("val1") },
@@ -11,215 +11,10 @@ const track = getComputedStyle(document.documentElement).getPropertyValue("--tra
 //   { input: document.getElementById("s3"), display: document.getElementById("val3") },
 // ];
 
-function updateSlider({ input, display, units, onUpdate }) {
-  const max = input.max;
-  const min = input.min;
-  const pct = ((input.value - min) / (max - min)) * 100;
-  display.textContent = input.value + units;
-  input.style.background = `linear-gradient(90deg, ${fill} ${pct}%, ${track} ${pct}%)`;
-
-  onUpdate(input.value);
-}
-
-let spectrogram;
-let index = 0;
-
-// const MAX_DB = -20;
-// const MIN_DB = -80;
-// const MAX_FREQ = 6e3;
-
-function gradient(t, colorA, colorB) {
-  const r = Math.round(colorA[0] + t * (colorB[0] - colorA[0]));
-  const g = Math.round(colorA[1] + t * (colorB[1] - colorA[1]));
-  const b = Math.round(colorA[2] + t * (colorB[2] - colorA[2]));
-  return `rgb(${r}, ${g}, ${b})`;
-}
-
-function resizeCanvas(canvas) {
-  const dpr = window.devicePixelRatio || 1;
-  const { width, height } = canvas.getBoundingClientRect();
-  canvas.width = width * dpr;
-  canvas.height = height * dpr;
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(dpr, dpr);
-}
-
 // const observer = new ResizeObserver(() => {
 //   const ctx = resizeCanvas(canvas);
 //   // redraw here
 // });
-
-class Spectrogram {
-  constructor(canvasId) {
-    this.canvas = document.getElementById(canvasId);
-    if (!this.canvas) {
-      console.error("Unable to get spectrogram canvas");
-    }
-
-    this.observer = new ResizeObserver(() => {
-      resizeCanvas(this.canvas);
-    });
-
-    this.observer.observe(this.canvas);
-
-    this.ctx = this.canvas.getContext("2d");
-
-    const { width, height } = this.canvas.getBoundingClientRect();
-    this.width = width;
-    this.height = height;
-
-    // px per second
-    this.scale = 20;
-
-    this.head = 0;
-
-    this.initializeSliders();
-  }
-
-  initializeSliders() {
-    this.MAX_DB = -20;
-    this.MIN_DB = -80;
-    this.MAX_FREQ = 22e3;
-
-    const sliderNames = [
-      {
-        id: "max-db",
-        display: "val-max-db",
-        units: "dB",
-        onUpdate: (x) => (this.MAX_DB = x),
-      },
-      {
-        id: "min-db",
-        display: "val-min-db",
-        units: "dB",
-        onUpdate: (x) => (this.MIN_DB = x),
-      },
-      {
-        id: "max-freq",
-        display: "val-max-freq",
-        units: "kHz",
-        onUpdate: (x) => {
-          this.MAX_FREQ = x * 1000;
-        },
-      },
-    ];
-
-    const sliders = sliderNames.map(({ id, display, units, onUpdate }) => ({
-      input: document.getElementById(id),
-      display: document.getElementById(display),
-      units: units,
-      onUpdate: onUpdate,
-    }));
-
-    sliders.forEach((s) => {
-      if (!s.input || !s.display) {
-        console.warn("undefined slider");
-        return;
-      }
-
-      s.input.addEventListener("input", () => updateSlider(s));
-
-      updateSlider(s);
-    });
-  }
-
-  computeRowHeight() {
-    console.log("using these opts", this.opts);
-    if (!this.opts) {
-      console.log("no opts?");
-      return;
-    }
-
-    const theoreticalMax = this.opts.sampleRate / 2;
-    // this is not great, i think we should go back
-    const maxFreq = Math.min(this.MAX_FREQ, theoreticalMax);
-    const analyzedFreqs = this.opts.fftSize * (maxFreq / theoreticalMax);
-    this.rowHeight = this.height / analyzedFreqs;
-    console.log(this.data[0].length);
-  }
-
-  loadSong(data, opts) {
-    // this.PCM = song;
-    this.data = data;
-    this.opts = opts;
-    // spacing is seconds between fft
-    this.fft_spacing = opts.fftSpacing;
-
-    this.colWidth = opts.fftSpacing * this.scale;
-  }
-
-  colorGradient(t) {
-    if (t > 1) {
-      t = 1;
-    }
-
-    const colors = [
-      [0, 0, 0],
-      [128, 0, 128],
-      [255, 255, 0],
-    ];
-
-    const segments = colors.length - 1;
-    const scaled = t * segments;
-    const i = Math.min(Math.floor(scaled), segments - 1);
-    const localT = scaled - i;
-    return gradient(localT, colors[i], colors[i + 1]);
-  }
-
-  normalizeDb(db) {
-    db = Math.min(this.MAX_DB, Math.max(this.MIN_DB, db));
-
-    return (db - this.MIN_DB) / (this.MAX_DB - this.MIN_DB);
-  }
-
-  drawColumn(x, freqBins) {
-    let index = 0;
-    let y = this.height;
-
-    while (y >= 0 && index < freqBins.length) {
-      const intensity = freqBins[index];
-
-      const normalized = this.normalizeDb(intensity);
-
-      if (intensity) {
-        this.ctx.fillStyle = this.colorGradient(normalized);
-        this.ctx.fillRect(x, y, this.colWidth, -this.rowHeight);
-      }
-
-      y -= this.rowHeight;
-      index++;
-    }
-  }
-
-  draw() {
-    this.computeRowHeight();
-
-    console.log(this.MAX_DB, this.MIN_DB, this.MAX_FREQ);
-    console.log(this.rowHeight);
-
-    const { width, height } = this.canvas.getBoundingClientRect();
-    this.ctx.clearRect(0, 0, width, height);
-
-    let x = 0;
-    let index = 0;
-
-    console.log("about to draw");
-    console.log("drawing", this.data);
-    while (x < this.width && index < this.data.length) {
-      this.drawColumn(x, this.data[index]);
-      x += this.colWidth;
-      index++;
-    }
-
-    console.log("done");
-
-    // this.ctx.clearRect(0, 0, 500, 500);
-    //
-    // this.ctx.fillStyle = "blue";
-    // this.ctx.fillRect(0, 0, 100, 100);
-  }
-}
 
 class AudioAnalyzer {
   constructor() {
@@ -283,14 +78,11 @@ class AudioAnalyzer {
       this.opts = songOpts;
 
       let analyzed = await wasm.analyzeSong(PCM, songOpts);
-      console.log("made it here");
-      spectrogram = analyzed.theGram.data;
-      console.log(spectrogram);
+      const spectrogramData = analyzed.theGram.data;
 
-      this.spectrogram.loadSong(spectrogram, songOpts);
+      this.spectrogram.loadSong(spectrogramData, songOpts);
 
       this.spectrogram.draw();
-      console.log("made it here");
 
       // Display audio information
       this.displayAudioInfo(file, this.audioBuffer);
@@ -362,7 +154,7 @@ class AudioAnalyzer {
     this.analyser.connect(this.audioContext.destination);
 
     // Start analysis visualization
-    this.visualizeFrequency();
+    // this.visualizeFrequency();
 
     // Play for analysis
     source.start();
@@ -372,51 +164,10 @@ class AudioAnalyzer {
       }
     };
   }
-
-  visualizeFrequency() {
-    // const bufferLength = this.analyser.frequencyBinCount;
-    const bufferLength = 1024;
-    // const dataArray = new Uint8Array(bufferLength);
-
-    const draw = () => {
-      this.animationId = requestAnimationFrame(draw);
-
-      // this.analyser.getByteFrequencyData(dataArray);
-      let dataArray = spectrogram[index];
-
-      const canvas = this.frequencyCanvas;
-      const ctx = this.frequencyCtx;
-
-      ctx.fillStyle = "rgb(0, 0, 0)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const barWidth = (canvas.width / bufferLength) * 2.5;
-      let barHeight;
-      let x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        barHeight = (dataArray[i] / 255) * canvas.height;
-
-        const r = barHeight + 25 * (i / bufferLength);
-        const g = 250 * (i / bufferLength);
-        const b = 50;
-
-        ctx.fillStyle = `rgb(${r},${g},${b})`;
-        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-
-        x += barWidth + 1;
-      }
-
-      index++;
-    };
-
-    draw();
-  }
 }
 
 // Initialize the analyzer when the page loads
 // document.addEventListener("DOMContentLoaded", () => {
-//   console.log("ah");
 //   new AudioAnalyzer();
 // });
 //
