@@ -196,7 +196,7 @@ type Song struct {
 type FreqBins []float64
 
 type Spectrogram struct {
-	Data     []FreqBins
+	Data     []FreqBins `wasm:"data"`
 	MaxDb    float64
 	BinCount int
 }

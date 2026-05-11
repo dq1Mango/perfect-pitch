@@ -5,56 +5,21 @@ console.log(await wasm.testString());
 const fill = getComputedStyle(document.documentElement).getPropertyValue("--fill-color").trim();
 const track = getComputedStyle(document.documentElement).getPropertyValue("--track-color").trim();
 
-let state = {
-  MAX_DB: -20,
-  MIN_DB: -80,
-  MAX_FREQ: 6e3,
-};
-
-const sliderNames = [
-  { id: "max-db", display: "val-max-db", units: "dB", key: "MAX_DB" },
-  { id: "min-db", display: "val-min-db", units: "dB", key: "MIN_DB" },
-  { id: "max-freq", display: "val-max-freq", units: "kHz", key: "MAX_FREQ" },
-];
-
-const sliders = sliderNames.map(({ id, display, units, key }) => ({
-  input: document.getElementById(id),
-  display: document.getElementById(display),
-  units: units,
-  key: key,
-}));
-// name + "hi";
-
-console.log(sliders);
-
 // const sliders = [
 //   { input: document.getElementById("s1"), display: document.getElementById("val1") },
 //   { input: document.getElementById("s2"), display: document.getElementById("val2") },
 //   { input: document.getElementById("s3"), display: document.getElementById("val3") },
 // ];
 
-function updateSlider({ input, display, units, key }) {
+function updateSlider({ input, display, units, onUpdate }) {
   const max = input.max;
   const min = input.min;
   const pct = ((input.value - min) / (max - min)) * 100;
   display.textContent = input.value + units;
   input.style.background = `linear-gradient(90deg, ${fill} ${pct}%, ${track} ${pct}%)`;
 
-  state[key] = input.value;
+  onUpdate(input.value);
 }
-
-sliders.forEach((s) => {
-  if (!s.input || !s.display) {
-    console.warn("undefined slider");
-    return;
-  }
-
-  s.input.addEventListener("input", () => updateSlider(s));
-
-  state[s.key] = s.input.value;
-
-  updateSlider(s);
-});
 
 let spectrogram;
 let index = 0;
@@ -78,12 +43,6 @@ function resizeCanvas(canvas) {
   const ctx = canvas.getContext("2d");
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(dpr, dpr);
-}
-
-function normalizeDb(db) {
-  db = Math.min(state.MAX_DB, Math.max(state.MIN_DB, db));
-
-  return (db - state.MIN_DB) / (state.MAX_DB - state.MIN_DB);
 }
 
 // const observer = new ResizeObserver(() => {
@@ -114,22 +73,80 @@ class Spectrogram {
     this.scale = 20;
 
     this.head = 0;
+
+    this.initializeSliders();
+  }
+
+  initializeSliders() {
+    this.MAX_DB = -20;
+    this.MIN_DB = -80;
+    this.MAX_FREQ = 22e3;
+
+    const sliderNames = [
+      {
+        id: "max-db",
+        display: "val-max-db",
+        units: "dB",
+        onUpdate: (x) => (this.MAX_DB = x),
+      },
+      {
+        id: "min-db",
+        display: "val-min-db",
+        units: "dB",
+        onUpdate: (x) => (this.MIN_DB = x),
+      },
+      {
+        id: "max-freq",
+        display: "val-max-freq",
+        units: "kHz",
+        onUpdate: (x) => {
+          this.MAX_FREQ = x * 1000;
+        },
+      },
+    ];
+
+    const sliders = sliderNames.map(({ id, display, units, onUpdate }) => ({
+      input: document.getElementById(id),
+      display: document.getElementById(display),
+      units: units,
+      onUpdate: onUpdate,
+    }));
+
+    sliders.forEach((s) => {
+      if (!s.input || !s.display) {
+        console.warn("undefined slider");
+        return;
+      }
+
+      s.input.addEventListener("input", () => updateSlider(s));
+
+      updateSlider(s);
+    });
+  }
+
+  computeRowHeight() {
+    console.log("using these opts", this.opts);
+    if (!this.opts) {
+      console.log("no opts?");
+      return;
+    }
+
+    const theoreticalMax = this.opts.sampleRate / 2;
+    // this is not great, i think we should go back
+    const maxFreq = Math.min(this.MAX_FREQ, theoreticalMax);
+    const analyzedFreqs = this.opts.fftSize * (maxFreq / theoreticalMax);
+    this.rowHeight = this.height / analyzedFreqs;
+    console.log(this.data[0].length);
   }
 
   loadSong(data, opts) {
     // this.PCM = song;
     this.data = data;
-    // this.opts = opts;
+    this.opts = opts;
     // spacing is seconds between fft
     this.fft_spacing = opts.fftSpacing;
 
     this.colWidth = opts.fftSpacing * this.scale;
-    const theoreticalMax = opts.sampleRate / 2;
-    // this is not great, i think we should go back
-    const maxFreq = Math.min(state.MAX_FREQ * 1000, theoreticalMax);
-    const analyzedFreqs = opts.fftSize * (maxFreq / theoreticalMax);
-    this.rowHeight = this.height / analyzedFreqs;
-    console.log(data[0].length);
   }
 
   colorGradient(t) {
@@ -150,6 +167,12 @@ class Spectrogram {
     return gradient(localT, colors[i], colors[i + 1]);
   }
 
+  normalizeDb(db) {
+    db = Math.min(this.MAX_DB, Math.max(this.MIN_DB, db));
+
+    return (db - this.MIN_DB) / (this.MAX_DB - this.MIN_DB);
+  }
+
   drawColumn(x, freqBins) {
     let index = 0;
     let y = this.height;
@@ -157,7 +180,7 @@ class Spectrogram {
     while (y >= 0 && index < freqBins.length) {
       const intensity = freqBins[index];
 
-      const normalized = normalizeDb(intensity);
+      const normalized = this.normalizeDb(intensity);
 
       if (intensity) {
         this.ctx.fillStyle = this.colorGradient(normalized);
@@ -170,12 +193,19 @@ class Spectrogram {
   }
 
   draw() {
-    console.log(state.MAX_DB, state.MIN_DB, state.MAX_FREQ);
+    this.computeRowHeight();
+
+    console.log(this.MAX_DB, this.MIN_DB, this.MAX_FREQ);
+    console.log(this.rowHeight);
+
+    const { width, height } = this.canvas.getBoundingClientRect();
+    this.ctx.clearRect(0, 0, width, height);
 
     let x = 0;
     let index = 0;
 
-    console.log("drawing");
+    console.log("about to draw");
+    console.log("drawing", this.data);
     while (x < this.width && index < this.data.length) {
       this.drawColumn(x, this.data[index]);
       x += this.colWidth;
@@ -250,14 +280,17 @@ class AudioAnalyzer {
 
       const PCM = Array.from(this.audioBuffer.getChannelData(0));
       let songOpts = await wasm.newAnalysisOpts();
-      console.log(songOpts);
+      this.opts = songOpts;
 
       let analyzed = await wasm.analyzeSong(PCM, songOpts);
-      spectrogram = analyzed.theGram.Data;
+      console.log("made it here");
+      spectrogram = analyzed.theGram.data;
+      console.log(spectrogram);
 
       this.spectrogram.loadSong(spectrogram, songOpts);
 
       this.spectrogram.draw();
+      console.log("made it here");
 
       // Display audio information
       this.displayAudioInfo(file, this.audioBuffer);
