@@ -21,14 +21,14 @@ uniform int u_colWidth;
 
 uniform int u_numFreqs;
 
-attribute float a_db;
-attribute int a_index;
+in float a_db;
+in int a_index;
 
-layout varying float v_intensity;
+out float v_intensity;
 
-float normalizeDb(db float) {
+float normalizeDb(float db) {
     // float  = min(u_maxDb, max(u_minDb, db));
-    float clamed = clamp(db, u_minDb, u_maxDb);
+    float clamped = clamp(db, u_minDb, u_maxDb);
 
     return (clamped - u_minDb) / (u_maxDb - u_minDb);
 }
@@ -37,10 +37,10 @@ void main() {
     int col = a_index / u_numFreqs;
     int row = a_index % u_numFreqs;
 
-    float x = col * u_colWidth;
-    float y = row * u_rowHeight;
+    float x = float(col * u_colWidth);
+    float y = float(row * u_rowHeight);
 
-    gl_Position = vec4(x, y, 0, 0)
+    gl_Position = vec4(x, y, 0, 0);
 
-    v_intensity = normalizeDb(a_ab)
+    v_intensity = normalizeDb(a_db);
 }

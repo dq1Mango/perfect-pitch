@@ -7,19 +7,19 @@ uniform vec3 u_colorMid;
 uniform vec3 u_colorEnd;
 
 // in v_position;
-in v_intensity;
+in float v_intensity;
 
-out fragColor;
+out vec3 fragColor;
 
-vec3 gradient(t float, colorA vec3, colorB vec3) {
+vec3 gradient(float t, vec3 colorA, vec3 colorB) {
     float r = colorA[0] + t * (colorB[0] - colorA[0]);
     float g = colorA[1] + t * (colorB[1] - colorA[1]);
     float b = colorA[2] + t * (colorB[2] - colorA[2]);
 
-    return vec3(r, g, b)
+    return vec3(r, g, b);
 }
 
-vec3 multiGradient(t float) {
+vec3 multiGradient(float t) {
     // hardcoded gradient for now, might fix later
     mat3x3 colors;
     colors[0] = u_colorStart;
@@ -30,12 +30,14 @@ vec3 multiGradient(t float) {
     float segments = 2.0;
     float scaled = t * segments;
 
-    float i = min(floor(scaled), segments - 1);
-    float localT = scaled - i;
+    float i_float = min(floor(scaled), segments - 1.0);
+    float localT = scaled - i_float;
+
+    int i = int(i_float);
 
     return gradient(localT, colors[i], colors[i + 1]);
 }
 
 void main() {
-    fragColor = multiGradient(v_intensity)
+    fragColor = multiGradient(v_intensity);
 }

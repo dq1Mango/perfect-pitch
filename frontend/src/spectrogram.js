@@ -11,9 +11,6 @@ function resizeCanvas(canvas) {
   const { width, height } = canvas.getBoundingClientRect();
   canvas.width = width * dpr;
   canvas.height = height * dpr;
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(dpr, dpr);
 }
 
 function updateSlider({ input, display, units, onUpdate }) {
@@ -44,7 +41,7 @@ export class Spectrogram {
       console.error("Unable to get spectrogram canvas");
     }
 
-    this.gl = this.canvas.getContext("webgl");
+    this.gl = this.canvas.getContext("webgl2");
 
     // this.observer = new ResizeObserver(() => {
     //   resizeCanvas(this.canvas);
@@ -71,7 +68,7 @@ export class Spectrogram {
 
     this.observer.observe(this.canvas);
 
-    this.ctx = this.canvas.getContext("2d");
+    // this.ctx = this.canvas.getContext("2d");
 
     const { width, height } = this.canvas.getBoundingClientRect();
     this.width = width;
@@ -85,28 +82,48 @@ export class Spectrogram {
     this.initializeSliders();
   }
 
+  setUniforms() {
+    const gl = this.gl;
+    const u = this.uniforms;
+
+    gl.uniform1f(u.minDb, this.MIN_DB);
+    gl.uniform1f(u.maxDb, this.MAX_DB);
+
+    gl.uniform1f(u.maxFreq, this.MAX_FREQ);
+
+    gl.uniform1f(u.rowHeight, this.rowHeight);
+    gl.uniform1f(u.colWidth, this.colWidth);
+  }
+
   async initWebGl() {
     const [testVertSrc, testFragSrc] = await Promise.all([
       webgl.loadShader("shaders/test.vert"),
       webgl.loadShader("shaders/test.frag"),
     ]);
-    //
-    // const simulationProgram = gl.createProgram();
-    //
-    // const simVert = compileShader(gl, gl.VERTEX_SHADER, simVertSrc);
-    // gl.attachShader(simulationProgram, simVert);
 
-    //const renderProgram = createProgram(gl, renderVertSrc, renderFragSrc);
-    //
+    const gl = this.gl;
 
-    // testing
+    const testProgram = webgl.createProgram(gl, testVertSrc, testFragSrc);
+    this.gl.useProgram(testProgram);
 
-    const testProgram = createProgram(gl, testVertSrc, testFragSrc);
-    gl.useProgram(testProgram);
+    const uniforms = ["minDb", "maxDb", "rowHeight", "colWidth", "numFreqs"];
+    var u = {};
 
-    const aPosition = 0;
-    const aSize = 1;
-    const aColor = 2;
+    uniforms.forEach((name) => {
+      const loc = this.gl.getUniformLocation(testProgram, "u_" + name);
+
+      if (!loc) {
+        console.warn("Uniform not found:", name);
+        return;
+      }
+
+      u[name] = loc;
+    });
+    // for each (const i in uniforms) {
+    // }
+
+    this.uniforms = uniforms;
+    this.setUniforms();
 
     let dataData = [
       [0, 0, 50, 1, 0, 0],
@@ -114,35 +131,35 @@ export class Spectrogram {
       [0, 0, 100, 0, 0, 1],
     ];
 
-    let iSuckAtJS = [];
+    // let iSuckAtJS = [];
+    //
+    // for (data of dataData) {
+    //   iSuckAtJS = iSuckAtJS.concat(data);
+    // }
+    // // console.log(iSuckAtJS);
+    // let vertData = new Float32Array(iSuckAtJS);
+    //
+    // const vertBuffer = gl.createBuffer();
+    //
+    // gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
+    // gl.bufferData(gl.ARRAY_BUFFER, vertData, gl.STATIC_DRAW);
 
-    for (data of dataData) {
-      iSuckAtJS = iSuckAtJS.concat(data);
-    }
-    // console.log(iSuckAtJS);
-    let vertData = new Float32Array(iSuckAtJS);
+    const indexLoc = gl.getAttribLocation(testProgram, "a_index");
+    const dbLoc = gl.getAttribLocation(testProgram, "a_db");
 
-    const vertBuffer = gl.createBuffer();
+    // math is hard
+    const STRIDE = 1 * 1 + 1 * 1;
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertData, gl.STATIC_DRAW);
+    gl.vertexAttribPointer(indexLoc, 1, gl.FLOAT, false, STRIDE, 0);
+    gl.vertexAttribPointer(dbLoc, 1, gl.FLOAT, false, STRIDE, 1 * 1);
 
-    const STRIDE = 2 * 4 + 1 * 4 + 3 * 4;
+    gl.enableVertexAttribArray(indexLoc);
+    gl.enableVertexAttribArray(dbLoc);
 
-    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, STRIDE, 0);
-    gl.vertexAttribPointer(aSize, 1, gl.FLOAT, false, STRIDE, 2 * 4);
-    gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, STRIDE, 2 * 4 + 4);
-
-    gl.enableVertexAttribArray(aPosition);
-    gl.enableVertexAttribArray(aColor);
-    gl.enableVertexAttribArray(aSize);
-
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    initialized = true;
-    draw(dataData.length);
+    this.initialized = true;
+    // draw(dataData.length);
     // gl.drawArrays(gl.POINTS, 0, dataData.length);
   }
 
@@ -206,6 +223,14 @@ export class Spectrogram {
     this.rowHeight = this.height / analyzedFreqs;
   }
 
+  setAttribArray(data) {
+    const gl = this.gl;
+    const buf = gl.createBuffer();
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+  }
+
   loadSong(data, opts) {
     // this.PCM = song;
     this.data = data;
@@ -214,6 +239,8 @@ export class Spectrogram {
     this.fft_spacing = opts.fftSpacing;
 
     this.colWidth = opts.fftSpacing * this.scale;
+
+    this.setAttribArray(data.flat());
   }
 
   colorGradient(t) {

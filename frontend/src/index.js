@@ -40,6 +40,7 @@ class AudioAnalyzer {
     this.frequencyCtx = this.frequencyCanvas.getContext("2d");
 
     this.spectrogram = new Spectrogram("spectrogram");
+    this.spectrogram.initWebGl();
   }
 
   setupEventListeners() {
