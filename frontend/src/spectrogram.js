@@ -139,19 +139,22 @@ export class Spectrogram {
     // // console.log(iSuckAtJS);
     // let vertData = new Float32Array(iSuckAtJS);
     //
-    // const vertBuffer = gl.createBuffer();
-    //
-    // gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
-    // gl.bufferData(gl.ARRAY_BUFFER, vertData, gl.STATIC_DRAW);
+    const vertBuffer = gl.createBuffer();
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, 1000000, gl.STATIC_DRAW);
 
     const indexLoc = gl.getAttribLocation(testProgram, "a_index");
     const dbLoc = gl.getAttribLocation(testProgram, "a_db");
 
-    // math is hard
-    const STRIDE = 1 * 1 + 1 * 1;
+    console.log("indexLoc:", indexLoc, "dbLoc:", dbLoc);
 
-    gl.vertexAttribPointer(indexLoc, 1, gl.FLOAT, false, STRIDE, 0);
-    gl.vertexAttribPointer(dbLoc, 1, gl.FLOAT, false, STRIDE, 1 * 1);
+    // math is hard
+    const STRIDE = 1 * 4 + 1 * 4;
+
+    // wow that I \/  is dumb
+    gl.vertexAttribIPointer(indexLoc, 1, gl.INT, false, STRIDE, 0);
+    gl.vertexAttribPointer(dbLoc, 1, gl.FLOAT, false, STRIDE, 1 * 4);
 
     gl.enableVertexAttribArray(indexLoc);
     gl.enableVertexAttribArray(dbLoc);
@@ -229,6 +232,8 @@ export class Spectrogram {
 
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+
+    this.attribArray = buf;
   }
 
   loadSong(data, opts) {
@@ -240,7 +245,30 @@ export class Spectrogram {
 
     this.colWidth = opts.fftSpacing * this.scale;
 
-    this.setAttribArray(data.flat());
+    // let attribArray = data.map((bins) => {
+    //   let withIndicies = [];
+    //   for (const index in bins) {
+    //     withIndicies += [index, bins[index]];
+    //   }
+    //
+    //   return withIndicies;
+    // });
+
+    const withIndicies = [];
+    console.log("huh", data[0][0]);
+    var index = 0;
+    for (const bins of data) {
+      for (const db of bins) {
+        // withIndicies += [index, bins[index]];
+        withIndicies.push(Math.round(index));
+        withIndicies.push(db);
+        index++;
+      }
+    }
+
+    console.log(withIndicies.length);
+
+    this.setAttribArray(withIndicies);
   }
 
   colorGradient(t) {
@@ -294,6 +322,11 @@ export class Spectrogram {
     this.computeRowHeight();
 
     console.log(this.MAX_DB, this.MIN_DB, this.MAX_FREQ);
+
+    const gl = this.gl;
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.attribArray);
+    gl.drawArrays(gl.POINTS, 0, 10000);
+    return;
 
     const { width, height } = this.canvas.getBoundingClientRect();
     this.ctx.clearRect(0, 0, width, height);
