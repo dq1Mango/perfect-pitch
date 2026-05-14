@@ -51,12 +51,8 @@ export class Spectrogram {
       const canvas = this.canvas;
 
       for (const entry of entries) {
-        const width =
-          entry.devicePixelContentBoxSize?.[0].inlineSize ??
-          entry.contentBoxSize[0].inlineSize * dpr;
-        const height =
-          entry.devicePixelContentBoxSize?.[0].blockSize ??
-          entry.contentBoxSize[0].blockSize * dpr;
+        const width = entry.devicePixelContentBoxSize?.[0].inlineSize ?? entry.contentBoxSize[0].inlineSize * dpr;
+        const height = entry.devicePixelContentBoxSize?.[0].blockSize ?? entry.contentBoxSize[0].blockSize * dpr;
 
         canvas.width = Math.round(width);
         canvas.height = Math.round(height);
@@ -79,6 +75,10 @@ export class Spectrogram {
 
     this.head = 0;
 
+    this.colorStart = [0, 0, 0];
+    this.colorMid = [128, 0, 128];
+    this.colorEnd = [255, 255, 0];
+
     this.initializeSliders();
   }
 
@@ -90,9 +90,23 @@ export class Spectrogram {
     gl.uniform1f(u.maxDb, this.MAX_DB);
 
     gl.uniform1f(u.maxFreq, this.MAX_FREQ);
+    const numFreqs = this.opts.fftSize / 2;
+    // console.log(numFreqs);
+    gl.uniform1i(u.numFreqs, numFreqs);
 
     gl.uniform1f(u.rowHeight, this.rowHeight);
     gl.uniform1f(u.colWidth, this.colWidth);
+    gl.uniform1f(u.colWidth, 0.2);
+
+    gl.uniform3fv(u.colorStart, this.colorStart);
+    gl.uniform3fv(u.colorMid, this.colorMid);
+    gl.uniform3fv(u.colorEnd, this.colorEnd);
+
+    gl.uniform2f(u.resolution, gl.canvas.width, gl.canvas.height);
+
+    Object.entries(u).forEach(([name, loc]) => {
+      console.log(name, ": ", gl.getUniform(this.program, loc));
+    });
   }
 
   async initWebGl() {
@@ -104,9 +118,21 @@ export class Spectrogram {
     const gl = this.gl;
 
     const testProgram = webgl.createProgram(gl, testVertSrc, testFragSrc);
+    this.program = testProgram;
+
     this.gl.useProgram(testProgram);
 
-    const uniforms = ["minDb", "maxDb", "rowHeight", "colWidth", "numFreqs"];
+    const uniforms = [
+      "minDb",
+      "maxDb",
+      "rowHeight",
+      "colWidth",
+      "numFreqs",
+      "colorStart",
+      "colorMid",
+      "colorEnd",
+      "resolution",
+    ];
     var u = {};
 
     uniforms.forEach((name) => {
@@ -119,11 +145,12 @@ export class Spectrogram {
 
       u[name] = loc;
     });
+
     // for each (const i in uniforms) {
     // }
 
-    this.uniforms = uniforms;
-    this.setUniforms();
+    this.uniforms = u;
+    // this.setUniforms();
 
     let dataData = [
       [0, 0, 50, 1, 0, 0],
@@ -138,26 +165,41 @@ export class Spectrogram {
     // }
     // // console.log(iSuckAtJS);
     // let vertData = new Float32Array(iSuckAtJS);
-    //
-    const vertBuffer = gl.createBuffer();
+    // Create a vertex array object (attribute state)
+    var vao = gl.createVertexArray();
+    this.vao = vao;
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, 1000000, gl.STATIC_DRAW);
+    // and make it the one we're currently working with
+    gl.bindVertexArray(vao);
 
     const indexLoc = gl.getAttribLocation(testProgram, "a_index");
     const dbLoc = gl.getAttribLocation(testProgram, "a_db");
 
     console.log("indexLoc:", indexLoc, "dbLoc:", dbLoc);
-
     // math is hard
-    const STRIDE = 1 * 4 + 1 * 4;
+    // const STRIDE = 1 * 4 + 1 * 4;
+
+    const vertIndicies = gl.createBuffer();
+    this.vertIndicies = vertIndicies;
+
+    // gl.bufferData(gl.ARRAY_BUFFER, 2 * 4 * 6e7, gl.STATIC_DRAW);
+
+    const vertDbs = gl.createBuffer();
+    this.vertDbs = vertDbs;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertIndicies);
+
+    gl.vertexAttribIPointer(indexLoc, 1, gl.INT, false, 0, 0);
+    gl.enableVertexAttribArray(dbLoc);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertDbs);
+
+    gl.vertexAttribPointer(dbLoc, 1, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(indexLoc);
 
     // wow that I \/  is dumb
-    gl.vertexAttribIPointer(indexLoc, 1, gl.INT, false, STRIDE, 0);
-    gl.vertexAttribPointer(dbLoc, 1, gl.FLOAT, false, STRIDE, 1 * 4);
-
-    gl.enableVertexAttribArray(indexLoc);
-    gl.enableVertexAttribArray(dbLoc);
+    // gl.vertexAttribIPointer(indexLoc, 1, gl.INT, false, STRIDE, 0);
+    // gl.vertexAttribPointer(dbLoc, 1, gl.FLOAT, false, STRIDE, 1 * 4);
 
     // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
@@ -223,17 +265,15 @@ export class Spectrogram {
     // this is not great, i think we should go back
     const maxFreq = Math.min(this.MAX_FREQ, theoreticalMax);
     const analyzedFreqs = this.opts.fftSize * (maxFreq / theoreticalMax);
+
     this.rowHeight = this.height / analyzedFreqs;
   }
 
   setAttribArray(data) {
     const gl = this.gl;
-    const buf = gl.createBuffer();
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-
-    this.attribArray = buf;
   }
 
   loadSong(data, opts) {
@@ -254,21 +294,41 @@ export class Spectrogram {
     //   return withIndicies;
     // });
 
-    const withIndicies = [];
-    console.log("huh", data[0][0]);
-    var index = 0;
-    for (const bins of data) {
-      for (const db of bins) {
-        // withIndicies += [index, bins[index]];
-        withIndicies.push(Math.round(index));
-        withIndicies.push(db);
-        index++;
-      }
+    // const withIndicies = [];
+    // var index = 0;
+    // for (const bins of data) {
+    //   for (const db of bins) {
+    //     // withIndicies += [index, bins[index]];
+    //     withIndicies.push(Math.round(index));
+    //     withIndicies.push(db);
+    //     index++;
+    //   }
+    // }
+    //
+    // console.log(withIndicies.length);
+    // console.log(withIndicies.slice(0, 10));
+    // console.log(withIndicies[withIndicies.length - 2]);
+    // console.log(withIndicies[withIndicies.length - 1]);
+    //
+
+    // this.setAttribArray(withIndicies);
+
+    const flattened = new Float32Array(data.flat());
+    console.log(flattened.length);
+    const ids = new Int32Array(flattened.length);
+    for (const index in ids) {
+      ids[index] = index;
     }
 
-    console.log(withIndicies.length);
+    const gl = this.gl;
 
-    this.setAttribArray(withIndicies);
+    gl.bindVertexArray(this.vao);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertIndicies);
+    gl.bufferData(gl.ARRAY_BUFFER, ids, gl.STATIC_DRAW);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vertDbs);
+    gl.bufferData(gl.ARRAY_BUFFER, flattened, gl.STATIC_DRAW);
   }
 
   colorGradient(t) {
@@ -321,11 +381,19 @@ export class Spectrogram {
 
     this.computeRowHeight();
 
+    this.setUniforms();
+
     console.log(this.MAX_DB, this.MIN_DB, this.MAX_FREQ);
 
     const gl = this.gl;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.attribArray);
-    gl.drawArrays(gl.POINTS, 0, 10000);
+    // gl.bindBuffer(gl.ARRAY_BUFFER, this.vertBuffer);
+    //
+    console.log(gl.getVertexAttrib(1, gl.VERTEX_ATTRIB_ARRAY_TYPE));
+    console.log(gl.INT);
+    // gl.bindVertexArray(this.vao);
+
+    gl.drawArrays(gl.POINTS, 0, 2 * 4 * 1e5);
+    console.log("done drawing");
     return;
 
     const { width, height } = this.canvas.getBoundingClientRect();
